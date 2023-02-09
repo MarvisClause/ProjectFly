@@ -9,7 +9,6 @@ public class ProjectFlyTarget : TargetRules
 	{
 		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.V2;
-		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_1;
-		ExtraModuleNames.Add("ProjectFly");
+		ExtraModuleNames.AddRange( new string[] { "ProjectFly" } );
 	}
 }
