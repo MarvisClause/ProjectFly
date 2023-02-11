@@ -15,11 +15,13 @@ ABaseFlyPlane::ABaseFlyPlane()
 
     // Create a static mesh
     StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
+    StaticMesh->SetSimulatePhysics(true);
     SetRootComponent(StaticMesh);
 
     // Create a camera boom (pulls in towards the player if there is a collision)
     CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     CameraBoom->SetupAttachment(RootComponent);
+    CameraBoom->bInheritRoll = false;
     CameraBoom->TargetArmLength = 400.0f;       // The camera follows at this distance behind the character
     CameraBoom->bUsePawnControlRotation = false; // Rotate the arm based on the controller
 
@@ -40,6 +42,11 @@ void ABaseFlyPlane::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
     PlayerInputComponent->BindAxis("RollControl", this, &ABaseFlyPlane::RollControl);
 }
 
+void ABaseFlyPlane::AddSpeed(float Speed)
+{
+    ForwardSpeed = FMath::Clamp(ForwardSpeed + Speed, MinimumPlaneSpeed, MaximumPlaneSpeed);
+}
+
 TObjectPtr<UStaticMeshComponent> ABaseFlyPlane::GetStaticMesh() const
 {
     return StaticMesh;
@@ -56,13 +63,15 @@ void ABaseFlyPlane::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    // Calculating speed
-    ForwardSpeed -= StaticMesh->GetForwardVector().Z * (StaticMesh->GetForwardVector().Z <= 0 ? 2.0f : 1.0f);
-    ForwardSpeed = FMath::Clamp(ForwardSpeed, MinimumPlaneSpeed, MaximumPlaneSpeed);
+    // Calculation of the speed change depending on the inclination of the plane
+    AddSpeed(-StaticMesh->GetForwardVector().Z * (StaticMesh->GetForwardVector().Z <= 0 ? DiveSpeedIncreaseScalar : RiseSpeedDecreaseScalar));
    
     UE_LOG(LogBaseFlyPlane, Log, TEXT("%f"), ForwardSpeed);
 
     StaticMesh->AddForce(StaticMesh->GetForwardVector() * ForwardSpeed);
+
+    // Make return to initial state after roll
+    GetStaticMesh()->SetRelativeRotation(FMath::Lerp(GetStaticMesh()->GetRelativeRotation(), CameraBoom->GetForwardVector().ToOrientationRotator(), DeltaTime));
 }
 
 void ABaseFlyPlane::PitchControl(float Value) 
