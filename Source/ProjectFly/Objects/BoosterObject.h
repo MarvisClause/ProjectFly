@@ -33,9 +33,15 @@ protected:
 	void OnTriggerAreaEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex);
 
-	// Booster power scalar
+	// Booster speed increase value
+	// Increases speed of the plane
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
-	float BoosterPowerScalar = 2500.0f;
+	float BoosterSpeedIncreaseValue = 5.0f;
+
+	// Booster push scalar
+	// Pushes plane
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
+	float BoosterPushScalar = 500.0f;
 
 	// Static mesh
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))

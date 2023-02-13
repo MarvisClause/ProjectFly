@@ -23,6 +23,12 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	// Adds speed to the plane
+	void AddSpeed(float Speed);
+
+	// Returns plane speed
+	float GetSpeed() const;
+
 	TObjectPtr<UStaticMeshComponent> GetStaticMesh() const;
 
 protected:
@@ -34,7 +40,13 @@ protected:
 	// Plane control settings
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
-	float AirControl = 800.0f;
+	float DiveSpeedIncreaseScalar = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
+	float RiseSpeedDecreaseScalar = 4.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
+	float AirControl = 2500.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
 	float MinimumPlaneSpeed = 250.0f;
@@ -51,6 +63,10 @@ private:
 
 	void RollControl(float Value);
 
+	void DiveCheck();
+
+	void BoostDeactivation();
+
 	// Camera boom positioning the camera behind the character
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
@@ -63,7 +79,19 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStaticMeshComponent> StaticMesh;
 
-private:
+	// Is used for diving boost check
+	bool bDiveBoost = false;
+
+	// Is used for diving boost activation
+	bool bRiseDecreaseDeactivation = false;
+
+	// Timer for dive check for boost
+	UPROPERTY()
+	FTimerHandle DiveCheckTimerHandle;
+
+	// Timer for boost deactivation
+	UPROPERTY()
+	FTimerHandle BoostDeactivationTimerHandle;
 
 	// Current flying speed of the plane
 	float ForwardSpeed = 0.0f;
