@@ -16,6 +16,7 @@ ABaseFlyPlane::ABaseFlyPlane()
     StaticMesh->SetMassOverrideInKg(NAME_None, 0.1f);   // Set the plane's mass (lower value for lighter feel)
     StaticMesh->SetLinearDamping(5.0f);                        // Set the plane's linear damping (lower value for less drag)
     StaticMesh->SetAngularDamping(5.0f);                       // Set the plane's angular damping (lower value for less rotational drag)
+    StaticMesh->SetNotifyRigidBodyCollision(true);
 
     SetRootComponent(StaticMesh);
 
@@ -60,7 +61,11 @@ void ABaseFlyPlane::BeginPlay()
 {
     Super::BeginPlay();
 
+    // Add initial speed
     AddSpeed(StartPlaneSpeed);
+
+    // Bind the OnComponentHit event
+    StaticMesh->OnComponentHit.AddDynamic(this, &ABaseFlyPlane::OnPlaneHit);
 }
 
 void ABaseFlyPlane::Tick(float DeltaTime)
@@ -136,11 +141,11 @@ void ABaseFlyPlane::CalculateRotation(float DeltaTime)
     if (ForwardSpeed <= PlaneSpeedThresholdForPitchDecline)
     {
         // Make static mesh slowly face downwards
-        GetStaticMesh()->SetRelativeRotation(FMath::Lerp(GetStaticMesh()->GetRelativeRotation(), FVector(0.0f, 0.0f, -1.0f).ToOrientationRotator(), DeltaTime / 10));
+        GetStaticMesh()->SetRelativeRotation(FMath::Lerp(StaticMesh->GetRelativeRotation(), FVector(StaticMesh->GetForwardVector().X, StaticMesh->GetForwardVector().Y, -1.0f).ToOrientationRotator(), DeltaTime / 10));
     }
 
     // Make return to initial state after roll
-    GetStaticMesh()->SetRelativeRotation(FMath::Lerp(GetStaticMesh()->GetRelativeRotation(), CameraBoom->GetForwardVector().ToOrientationRotator(), DeltaTime * AutoRotationPlaneSpeedScalar));
+    GetStaticMesh()->SetRelativeRotation(FMath::Lerp(StaticMesh->GetRelativeRotation(), CameraBoom->GetForwardVector().ToOrientationRotator(), DeltaTime * AutoRotationPlaneSpeedScalar));
 
 }
 
@@ -150,4 +155,10 @@ void ABaseFlyPlane::UpdateCamera()
     const float SpeedPercentage = FMath::GetMappedRangeValueClamped(FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed), FVector2D(0.0f, 1.0f), ForwardSpeed);
     const float CameraBoomLength = FMath::Lerp(MinimumCameraBoomLength, MaximumCameraBoomLength, SpeedPercentage);
     CameraBoom->TargetArmLength = CameraBoomLength;
+}
+
+void ABaseFlyPlane::OnPlaneHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+    // Decrease speed 
+    ForwardSpeed -= ForwardSpeed / 2;
 }
