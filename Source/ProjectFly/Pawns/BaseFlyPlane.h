@@ -112,5 +112,6 @@ private:
 
     // Forward speed of the plane
     // This is the main variable, which defines speed of the plane 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
     float ForwardSpeed = 0.0f;
 };
