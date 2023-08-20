@@ -74,10 +74,10 @@ protected:
     // Camera control settings
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Camera Control", meta = (ClampMin = 0.0f))
-    float MinimumCameraBoomLength = 120.0f;
+    float MinimumCameraBoomLength = 250.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Camera Control", meta = (ClampMin = 0.0f))
-    float MaximumCameraBoomLength = 300.0f;
+    float MaximumCameraBoomLength = 600.0f;
 
     #pragma endregion
 
