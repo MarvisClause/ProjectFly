@@ -11,88 +11,107 @@ class UCameraComponent;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogBaseFlyPlane, Log, All);
 
+// Basic pawn, which imitates paper plane
 UCLASS()
 class PROJECTFLY_API ABaseFlyPlane : public APawn
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	// Sets default values for this pawn's properties
-	ABaseFlyPlane();
+    // Sets default values for this pawn's properties
+    ABaseFlyPlane();
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+    // Called to bind functionality to input
+    virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	// Adds speed to the plane
-	void AddSpeed(float Speed);
+    // Adds speed to the plane
+    void AddSpeed(float Speed);
+    // Returns plane speed
+    float GetSpeed() const;
 
-	// Returns plane speed
-	float GetSpeed() const;
-
-	TObjectPtr<UStaticMeshComponent> GetStaticMesh() const;
+    UStaticMeshComponent* GetStaticMesh() const;
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+    // Called when the game starts or when spawned
+    virtual void BeginPlay() override;
 
-	virtual void Tick(float DeltaTime);
+    virtual void Tick(float DeltaTime) override;
 
-	// Plane control settings
+    #pragma region PlaneControlSettings
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
-	float DiveSpeedIncreaseScalar = 2.0f;
+    // Plane control settings
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
-	float RiseSpeedDecreaseScalar = 4.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
+    float DiveSpeedIncreaseScalar = 2.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
-	float AirControl = 2500.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
+    float RiseSpeedDecreaseScalar = 4.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
-	float MinimumPlaneSpeed = 250.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
+    float AirControl = 9.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
-	float MaximumPlaneSpeed = 25000.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
+    float TurbulenceFactor = 6.0f;
+
+    const float MinimumPlaneSpeed = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
+    float MaximumPlaneSpeed = 3000.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
+    float StartPlaneSpeed = 3000.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
+    float AutoRotationPlaneSpeedScalar = 2.0f;
+
+    // Defines speed threshold, under which plane will start to dive downwards automatically
+    const float PlaneSpeedThresholdForPitchDecline = 300.0f;
+
+    #pragma endregion
+
+    #pragma region CameraControlSettings
+
+    // Camera control settings
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Camera Control", meta = (ClampMin = 0.0f))
+    float MinimumCameraBoomLength = 120.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Camera Control", meta = (ClampMin = 0.0f))
+    float MaximumCameraBoomLength = 300.0f;
+
+    #pragma endregion
 
 private:
-	// Input process
 
-	void PitchControl(float Value);
+    // Input process
+    void PitchControl(float Value);
+    void YawControl(float Value);
+    void RollControl(float Value);
 
-	void YawControl(float Value);
+    // Calculates change of speed from inclination 
+    void CalculateSpeed(float DeltaTime);
+    // Calculates rotation changes
+    void CalculateRotation(float DeltaTime);
+    // Updates camera
+    void UpdateCamera();
 
-	void RollControl(float Value);
+    UFUNCTION()
+    void OnPlaneHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
-	void DiveCheck();
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+    UStaticMeshComponent* StaticMesh;
 
-	void BoostDeactivation();
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+    USceneComponent* FocusSceneComponent;
 
-	// Camera boom positioning the camera behind the character
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<USpringArmComponent> CameraBoom;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+    USpringArmComponent* CameraBoom;
 
-	// Follow camera
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UCameraComponent> FollowCamera;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+    UCameraComponent* FollowCamera;
 
-	// Static mesh
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UStaticMeshComponent> StaticMesh;
-
-	// Is used for diving boost check
-	bool bDiveBoost = false;
-
-	// Is used for diving boost activation
-	bool bRiseDecreaseDeactivation = false;
-
-	// Timer for dive check for boost
-	UPROPERTY()
-	FTimerHandle DiveCheckTimerHandle;
-
-	// Timer for boost deactivation
-	UPROPERTY()
-	FTimerHandle BoostDeactivationTimerHandle;
-
-	// Current flying speed of the plane
-	float ForwardSpeed = 0.0f;
+    // Forward speed of the plane
+    // This is the main variable, which defines speed of the plane 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+    float ForwardSpeed = 0.0f;
 };
