@@ -7,7 +7,7 @@
 // Sets default values
 ABoosterObject::ABoosterObject()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 
@@ -31,10 +31,16 @@ void ABoosterObject::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// Push plane upwards
 	for (int32 Index = 0; Index < AffectedPlanesArray.Num(); ++Index)
 	{
-		AffectedPlanesArray[Index]->GetStaticMesh()->AddImpulse(StaticMesh->GetUpVector() * BoosterPowerScalar);
-		AffectedPlanesArray[Index]->GetStaticMesh()->AddImpulse(AffectedPlanesArray[Index]->GetStaticMesh()->GetForwardVector() * BoosterPowerScalar);
+		// Push plane upwards
+		AffectedPlanesArray[Index]->GetStaticMesh()->AddImpulse(StaticMesh->GetUpVector() * BoosterPushScalar);
+		// Increase plane's speed
+		AffectedPlanesArray[Index]->AddSpeed(BoosterSpeedIncreaseValue);
+		// Rotate plane to the booster upright direction
+		AffectedPlanesArray[Index]->GetStaticMesh()->SetRelativeRotation(
+		FMath::Lerp(AffectedPlanesArray[Index]->GetStaticMesh()->GetRelativeRotation(), StaticMesh->GetUpVector().ToOrientationRotator(), DeltaTime));
 	}
 }
 
