@@ -11,12 +11,14 @@ ABoosterObject::ABoosterObject()
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 
-	// Create a static mesh
+	BaseSceneComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BaseSceneComponent"));
+	SetRootComponent(BaseSceneComponent);
+
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
-	SetRootComponent(StaticMesh);
+	StaticMesh->SetupAttachment(RootComponent);
 
 	BoosterTriggerArea = CreateDefaultSubobject<UBoxComponent>(TEXT("BoosterTriggerArea"));
-	BoosterTriggerArea->SetupAttachment(RootComponent);
+	BoosterTriggerArea->SetupAttachment(StaticMesh);
 }
 
 void ABoosterObject::BeginPlay()
@@ -34,13 +36,19 @@ void ABoosterObject::Tick(float DeltaTime)
 	// Push plane upwards
 	for (int32 Index = 0; Index < AffectedPlanesArray.Num(); ++Index)
 	{
-		// Push plane upwards
-		AffectedPlanesArray[Index]->GetStaticMesh()->AddImpulse(StaticMesh->GetUpVector() * BoosterPushScalar);
-		// Increase plane's speed
-		AffectedPlanesArray[Index]->AddSpeed(BoosterSpeedIncreaseValue);
-		// Rotate plane to the booster upright direction
-		AffectedPlanesArray[Index]->GetStaticMesh()->SetRelativeRotation(
-		FMath::Lerp(AffectedPlanesArray[Index]->GetStaticMesh()->GetRelativeRotation(), StaticMesh->GetUpVector().ToOrientationRotator(), DeltaTime));
+		// Gradually increase the influence level
+		AffectedPlanesArray[Index].Value = FMath::Clamp(AffectedPlanesArray[Index].Value + (DeltaTime * BoosterSpeedIncreaseValue) * BoosterInfluenceScalar, 0.0f, 1.0f);
+
+		// Push plane upwards with scaled impulse
+		AffectedPlanesArray[Index].Key->GetStaticMesh()->AddImpulse(StaticMesh->GetUpVector() * BoosterPushScalar * AffectedPlanesArray[Index].Value);
+
+		// Increase plane's speed with scaled value
+		AffectedPlanesArray[Index].Key->AddSpeed(BoosterSpeedIncreaseValue * AffectedPlanesArray[Index].Value);
+
+		// Rotate plane to the booster upright direction with scaled rotation
+		AffectedPlanesArray[Index].Key->GetStaticMesh()->SetRelativeRotation(
+			FMath::Lerp(AffectedPlanesArray[Index].Key->GetStaticMesh()->GetRelativeRotation(), StaticMesh->GetUpVector().ToOrientationRotator(), DeltaTime * AffectedPlanesArray[Index].Value)
+		);
 	}
 }
 
@@ -48,11 +56,14 @@ void ABoosterObject::OnTriggerAreaBeginOverlap(UPrimitiveComponent* OverlappedCo
 {
 	if (ABaseFlyPlane* FlyPlane = Cast<ABaseFlyPlane>(OtherActor))
 	{
-		if (AffectedPlanesArray.Contains(FlyPlane))
+		for (int32 Index = 0; Index < AffectedPlanesArray.Num(); ++Index)
 		{
-			AffectedPlanesArray.Remove(FlyPlane);
+			if (AffectedPlanesArray[Index].Key == FlyPlane)
+			{
+				AffectedPlanesArray.RemoveAt(Index);
+			}
 		}
-		AffectedPlanesArray.Add(FlyPlane);
+		AffectedPlanesArray.Add(TTuple<TObjectPtr<ABaseFlyPlane>, float>(FlyPlane, 0.0f));
 	}
 
 	PrimaryActorTick.SetTickFunctionEnable(AffectedPlanesArray.Num() != 0);
@@ -62,9 +73,12 @@ void ABoosterObject::OnTriggerAreaEndOverlap(UPrimitiveComponent* OverlappedComp
 {
 	if (ABaseFlyPlane* FlyPlane = Cast<ABaseFlyPlane>(OtherActor))
 	{
-		if (AffectedPlanesArray.Contains(FlyPlane))
+		for (int32 Index = 0; Index < AffectedPlanesArray.Num(); ++Index)
 		{
-			AffectedPlanesArray.Remove(FlyPlane);
+			if (AffectedPlanesArray[Index].Key == FlyPlane)
+			{
+				AffectedPlanesArray.RemoveAt(Index);
+			}
 		}
 	}
 

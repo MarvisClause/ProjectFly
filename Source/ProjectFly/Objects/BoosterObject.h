@@ -27,11 +27,11 @@ protected:
 
 	UFUNCTION()
 	virtual void OnTriggerAreaBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
-			int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	UFUNCTION()
 	void OnTriggerAreaEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
-		int32 OtherBodyIndex);
+	int32 OtherBodyIndex);
 
 	// Booster speed increase value
 	// Increases speed of the plane
@@ -43,6 +43,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
 	float BoosterPushScalar = 500.0f;
 
+	// Booster push scalar
+	// Pushes plane
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f, ClampMax = 1.0f))
+	float BoosterInfluenceScalar = 0.2f;
+
+	// Scene component
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USceneComponent> BaseSceneComponent;
+
 	// Static mesh
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStaticMeshComponent> StaticMesh;
@@ -53,5 +62,6 @@ protected:
 
 private:
 	// Affects plane, which enters trigger area
-	TArray<TObjectPtr<ABaseFlyPlane>> AffectedPlanesArray;
+	// Holds information about plane and booster object influence on it
+	TArray<TTuple<TObjectPtr<ABaseFlyPlane>, float>> AffectedPlanesArray;
 };
