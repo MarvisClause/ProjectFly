@@ -76,6 +76,19 @@ void ABaseFlyPlane::Tick(float DeltaTime)
     CalculateRotation(DeltaTime);
     UpdateCamera();
 
+    if (ForwardSpeed < 100.0f)
+    {
+        StaticMesh->SetMassScale(NAME_None, 1000.0f);
+        StaticMesh->SetLinearDamping(0.01f);
+        StaticMesh->SetAngularDamping(5.0f);
+    }
+    else
+    {
+        StaticMesh->SetMassScale(NAME_None, 0.1f);
+        StaticMesh->SetLinearDamping(5.0f);
+        StaticMesh->SetAngularDamping(5.0f);
+    }
+
     UE_LOG(LogBaseFlyPlane, Log, TEXT("%f"), ForwardSpeed);
 }
 
