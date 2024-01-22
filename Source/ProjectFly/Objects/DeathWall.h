@@ -4,20 +4,20 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "BoosterObject.generated.h"
+#include "DeathWall.generated.h"
 
 class UBoxComponent;
 class ABaseFlyPlane;
 
-// Pushes plane, if it enters booster trigger area
+// Chases plane by always moving towards its location and decreasing its speed once collided
 UCLASS()
-class PROJECTFLY_API ABoosterObject : public AActor
+class PROJECTFLY_API ADeathWall : public AActor
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this actor's properties
-	ABoosterObject();
+	ADeathWall();
 
 protected:
 	// Called when the game starts or when spawned
@@ -33,34 +33,30 @@ protected:
 	void OnTriggerAreaEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 	int32 OtherBodyIndex);
 
-	// Booster speed increase value
-	// Increases speed of the plane
+	// Defines, how speed is decreased per tick once plane is inside the collider
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
-	float BoosterSpeedIncreaseValue = 5.0f;
+	float SpeedDecreaseValue = 5.0f;
 
-	// Booster push scalar
-	// Pushes plane
+	// Defines, death wall rotation speed value
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
-	float BoosterPushScalar = 500.0f;
+	float RotationSpeedValue = 0.1f;
 
-	// Booster push scalar
-	// Pushes plane
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f, ClampMax = 1.0f))
-	float BoosterInfluenceScalar = 0.2f;
+	// Defines, death wall chase speed
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
+	float ChaseSpeedValue = 1.0f;
 
 	// Scene component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USceneComponent> BaseSceneComponent;
 
-	// Static mesh
+	// Trigger area
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UStaticMeshComponent> StaticMesh;
-
-	// Booster trigger area
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UBoxComponent> BoosterTriggerArea;
+	TObjectPtr<UBoxComponent> SpeedDecreaseTriggerArea;
 
 private:
+	// Target plane, which will be followed by death wall
+	TObjectPtr<ABaseFlyPlane> TargetPlane;
+
 	// Affects plane, which enters trigger area
 	// Holds information about plane and booster object influence on it
 	TArray<TTuple<TObjectPtr<ABaseFlyPlane>, float>> AffectedPlanesArray;
