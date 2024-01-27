@@ -25,7 +25,7 @@ struct FSpawnBoosterData
 };
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
-class PROJECTFLY_API UObjectSpawnerComponent : public UActorComponent
+class PROJECTFLY_API UObjectSpawnerComponent : public USceneComponent
 {
     GENERATED_BODY()
 

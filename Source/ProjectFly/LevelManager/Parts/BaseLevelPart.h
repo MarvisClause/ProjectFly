@@ -22,7 +22,10 @@ public:
     USceneComponent* GetFloorStartConnector() const;
 
     // Returns the end connector component
-    USceneComponent* GetFloorEndConnector() const;
+    USceneComponent* GetFloorEndConnector() const; 
+
+    // Sets location by start connect
+    void SetLocationByStartConnector(const FVector& Location);
 
     // Attaches this level part to another ABaseLevelPart via their connector components
     void AttachToLevelPart(ABaseLevelPart* OtherLevelPart);
@@ -38,5 +41,9 @@ protected:
 
     // Visible floor mesh component
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LevelPart")
-    UStaticMeshComponent* FloorMesh;
+    UStaticMeshComponent* FloorMesh;  
+
+    // Visible base scene component mesh component
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LevelPart")
+    USceneComponent* BaseFloorSceneComponent;
 };

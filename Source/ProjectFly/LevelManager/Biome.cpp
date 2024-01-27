@@ -1,18 +1,6 @@
 #include "ProjectFly/LevelManager/Biome.h"
 
-TArray<AGameLevelPart*> UBiome::GenerateRandomLevelSequence()
-{
-    TArray<AGameLevelPart*> LevelSequence;
 
-    // Generate a random sequence of level parts based on biome characteristics
-    LevelSequence.Add(GenerateRandomPart(ELevelPartCategory::StrutIn));
-    LevelSequence.Add(GenerateRandomPart(ELevelPartCategory::Straight));
-    LevelSequence.Add(GenerateRandomPart(ELevelPartCategory::Turn));
-    LevelSequence.Add(GenerateRandomPart(ELevelPartCategory::Elevation));
-    LevelSequence.Add(GenerateRandomPart(ELevelPartCategory::StrutOut));
-
-    return LevelSequence;
-}
 
 AGameLevelPart* UBiome::GenerateRandomPart(ELevelPartCategory Category)
 {

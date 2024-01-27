@@ -20,10 +20,7 @@ class PROJECTFLY_API UBiome : public UObject
 	GENERATED_BODY()
 
 public:
-	// Function to generate a random sequence of level parts based on the biome
-	UFUNCTION(BlueprintCallable, Category = "Biome")
-	TArray<AGameLevelPart*> GenerateRandomLevelSequence();
-
+	
 	// Function to generate a random level part for a specific category
 	AGameLevelPart* GenerateRandomPart(ELevelPartCategory Category);
 
