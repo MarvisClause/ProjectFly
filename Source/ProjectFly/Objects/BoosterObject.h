@@ -10,7 +10,7 @@ class UBoxComponent;
 class ABaseFlyPlane;
 
 // Pushes plane, if it enters booster trigger area
-UCLASS()
+UCLASS(Abstract)
 class PROJECTFLY_API ABoosterObject : public AActor
 {
 	GENERATED_BODY()

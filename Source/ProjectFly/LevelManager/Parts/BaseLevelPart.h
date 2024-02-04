@@ -6,7 +6,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "BaseLevelPart.generated.h"
 
-UCLASS()
+UCLASS(Abstract)
 class PROJECTFLY_API ABaseLevelPart : public AActor
 {
     GENERATED_BODY()
@@ -24,13 +24,13 @@ public:
     // Returns the end connector component
     USceneComponent* GetFloorEndConnector() const; 
 
-    // Sets location by start connect
-    void SetLocationByStartConnector(const FVector& Location);
-
     // Attaches this level part to another ABaseLevelPart via their connector components
     void AttachToLevelPart(ABaseLevelPart* OtherLevelPart);
 
 protected:
+    // Sets location by start connect
+    void SetLocationByStartConnector(const FVector& Location);
+
     // Floor start connector component
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LevelPart")
     USceneComponent* FloorStartConnector;

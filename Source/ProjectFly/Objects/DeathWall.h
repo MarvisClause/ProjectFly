@@ -10,7 +10,7 @@ class UBoxComponent;
 class ABaseFlyPlane;
 
 // Chases plane by always moving towards its location and decreasing its speed once collided
-UCLASS()
+UCLASS(Abstract)
 class PROJECTFLY_API ADeathWall : public AActor
 {
 	GENERATED_BODY()

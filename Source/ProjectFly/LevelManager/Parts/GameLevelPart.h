@@ -6,7 +6,7 @@
 #include "ProjectFly/LevelManager/Components/ObjectSpawnerComponent.h" 
 #include "GameLevelPart.generated.h"
 
-UCLASS()
+UCLASS(Abstract)
 class PROJECTFLY_API AGameLevelPart : public ABaseLevelPart
 {
     GENERATED_BODY()

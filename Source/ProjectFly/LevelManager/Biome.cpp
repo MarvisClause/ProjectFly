@@ -1,8 +1,6 @@
 #include "ProjectFly/LevelManager/Biome.h"
 
-
-
-AGameLevelPart* UBiome::GenerateRandomPart(ELevelPartCategory Category)
+AGameLevelPart* FBiome::GenerateRandomPart(UWorld* World, ELevelPartCategory Category)
 {
     TArray<TSubclassOf<AGameLevelPart>>* SelectedArray = nullptr;
 
@@ -36,7 +34,7 @@ AGameLevelPart* UBiome::GenerateRandomPart(ELevelPartCategory Category)
         int32 RandomIndex = FMath::RandRange(0, SelectedArray->Num() - 1);
 
         // Spawn the selected game level part
-        AGameLevelPart* SpawnedPart = GetWorld()->SpawnActor<AGameLevelPart>((*SelectedArray)[RandomIndex]);
+        AGameLevelPart* SpawnedPart = World->SpawnActor<AGameLevelPart>((*SelectedArray)[RandomIndex]);
 
         return SpawnedPart;
     }

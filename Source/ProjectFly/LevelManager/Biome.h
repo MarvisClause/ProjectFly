@@ -14,17 +14,16 @@ enum class ELevelPartCategory : uint8
 	Elevation
 };
 
-UCLASS()
-class PROJECTFLY_API UBiome : public UObject
+USTRUCT(BlueprintType)
+struct PROJECTFLY_API FBiome
 {
 	GENERATED_BODY()
 
 public:
 	
 	// Function to generate a random level part for a specific category
-	AGameLevelPart* GenerateRandomPart(ELevelPartCategory Category);
+	AGameLevelPart* GenerateRandomPart(UWorld* World, ELevelPartCategory Category);
 
-protected:
 	// Array of AGameLevelPart subclasses for "strut" pieces coming into this biome
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Biome")
 	TArray<TSubclassOf<AGameLevelPart>> StrutIns;

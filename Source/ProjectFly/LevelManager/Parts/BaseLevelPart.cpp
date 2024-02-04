@@ -52,7 +52,7 @@ void ABaseLevelPart::AttachToLevelPart(ABaseLevelPart* OtherLevelPart)
         UE_LOG(LogBaseLevelPart, Log, TEXT("Floor %s attached to %s"), *GetName(), *OtherLevelPart->GetName());
 
         // Set floor location and rotation according to other floor end connector data
-        SetActorRotation(OtherLevelPart->GetFloorEndConnector()->GetComponentRotation());
+        SetActorRotation(FRotator(0.0, OtherLevelPart->GetFloorEndConnector()->GetComponentRotation().Yaw, 0.0));
         SetActorLocation(OtherLevelPart->GetFloorEndConnector()->GetComponentLocation());
         // Offset floor, so start connect is located on actor location
         SetLocationByStartConnector(GetActorLocation());

@@ -13,7 +13,7 @@ class UCameraComponent;
 DECLARE_LOG_CATEGORY_EXTERN(LogBaseFlyPlane, Log, All);
 
 // Basic pawn, which imitates paper plane
-UCLASS()
+UCLASS(Abstract)
 class PROJECTFLY_API ABaseFlyPlane : public APawn
 {
     GENERATED_BODY()

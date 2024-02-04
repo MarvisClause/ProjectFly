@@ -6,12 +6,23 @@
 #include "GameFramework/GameModeBase.h"
 #include "ProjectFlyGameModeBase.generated.h"
 
+class ALevelManager;
+
 /**
- * 
+ * Controls main game flow 
  */
-UCLASS()
+UCLASS(Abstract)
 class PROJECTFLY_API AProjectFlyGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
 	
+public:
+	virtual void BeginPlay() override;
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<ALevelManager> LevelManagerClass;
+
+	UPROPERTY()
+	ALevelManager* LevelManager;
 };

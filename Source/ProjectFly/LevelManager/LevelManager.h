@@ -7,12 +7,14 @@
 #include "ProjectFly/LevelManager/Parts/ConnectorLevelPart.h"
 #include "LevelManager.generated.h"
 
-UCLASS()
-class PROJECTFLY_API ULevelManager : public UObject
+UCLASS(Abstract)
+class PROJECTFLY_API ALevelManager : public AActor
 {
     GENERATED_BODY()
 
 public:
+    ALevelManager();
+
     // Function to spawn the next biome in the level sequence
     UFUNCTION(BlueprintCallable, Category = "LevelManager")
     void SpawnNextBiome();
@@ -20,15 +22,16 @@ public:
 protected:
     // Array of Biome objects
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LevelManager")
-    TArray<UBiome*> Biomes;
+    TArray<FBiome> Biomes;
 
+    // TODO: This number should be a somewhat random one, which will allows us to scale level generation size
     // Number of level parts to generate per biome
     UPROPERTY(EditDefaultsOnly, Category = "LevelManager")
     int32 LevelPartsPerBiome;
 
 private:
     // Helper function to spawn a random level part from the given biome
-    AGameLevelPart* SpawnRandomLevelPart(UBiome* Biome);
+    AGameLevelPart* SpawnRandomLevelPart(FBiome Biome);
 
     // Helper function to spawn a connector level part
     AConnectorLevelPart* SpawnConnectorLevelPart();
