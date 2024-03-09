@@ -1,5 +1,6 @@
 #include "ProjectFly/LevelManager/Parts/ConnectorLevelPart.h"
 #include "TimerManager.h"
+#include "ProjectFly/Pawns/BaseFlyPlane.h"
 
 // Sets default values
 AConnectorLevelPart::AConnectorLevelPart()
@@ -9,16 +10,13 @@ AConnectorLevelPart::AConnectorLevelPart()
 
     // Create components
     GatewayTrigger = CreateDefaultSubobject<UBoxComponent>(TEXT("GatewayTrigger"));
-    RootComponent = GatewayTrigger;
+    GatewayTrigger->SetupAttachment(RootComponent);
 
     EnterGatewayBlock = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("EnterGatewayBlock"));
     EnterGatewayBlock->SetupAttachment(RootComponent);
 
     ExitGatewayBlock = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ExitGatewayBlock"));
     ExitGatewayBlock->SetupAttachment(RootComponent);
-
-    // Bind the handler function to the gateway trigger
-    GatewayTrigger->OnComponentBeginOverlap.AddDynamic(this, &AConnectorLevelPart::HandleGatewayEnter);
 
     // Initialize default values
     CloseDelay = 5.0f; // Default delay before closing the gateway
@@ -31,31 +29,42 @@ void AConnectorLevelPart::BeginPlay()
     Super::BeginPlay();
 
     // Additional initialization logic can be added here
+    OpenGateway();
+
+    // Bind the handler function to the gateway trigger
+    GatewayTrigger->OnComponentBeginOverlap.AddDynamic(this, &AConnectorLevelPart::HandleGatewayEnter);
 }
 
 // Function to handle logic when something enters the gateway
 void AConnectorLevelPart::HandleGatewayEnter(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-    if (bIsGatewayOpen)
+    if (OtherActor->IsA(ABaseFlyPlane::StaticClass()) && bIsGatewayOpen)
     {
-        // Trigger the event when the gateway is entered
-        OnGatewayTriggerEnter(OtherActor);
-
         // Close the gateway after a delay
         GetWorldTimerManager().SetTimerForNextTick(this, &AConnectorLevelPart::CloseGateway);
 
         // Notify upper managers about entering the connector
         NotifyUpperManagers();
-
-        bIsGatewayOpen = false; // Close the gateway
     }
+}
+
+void AConnectorLevelPart::OpenGateway()
+{
+    EnterGatewayBlock->SetVisibility(false);
+    EnterGatewayBlock->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    
+    ExitGatewayBlock->SetVisibility(true);
+    ExitGatewayBlock->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 }
 
 // Function to close the gateway after a delay
 void AConnectorLevelPart::CloseGateway()
 {
-    EnterGatewayBlock->SetVisibility(false);
-    ExitGatewayBlock->SetVisibility(true);
+    EnterGatewayBlock->SetVisibility(true);
+    EnterGatewayBlock->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    
+    ExitGatewayBlock->SetVisibility(false);
+    ExitGatewayBlock->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 // Function to notify upper managers about entering the connector
@@ -63,4 +72,7 @@ void AConnectorLevelPart::NotifyUpperManagers()
 {
     // Logic to notify upper managers about entering the connector
     // This could involve triggering level generation or biome switching events.
+    // Trigger the event when the gateway is entered
+    OnGatewayEnterDelegate.Broadcast(this);
+    bIsGatewayOpen = false;
 }

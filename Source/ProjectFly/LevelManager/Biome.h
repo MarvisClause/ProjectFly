@@ -7,8 +7,10 @@
 UENUM(BlueprintType)
 enum class ELevelPartCategory : uint8
 {
+	// Special parts 
 	StrutIn,
 	StrutOut,
+	// Regular parts
 	Straight,
 	Turn,
 	Elevation

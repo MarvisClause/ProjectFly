@@ -15,6 +15,9 @@ void ALevelManager::SpawnNextBiome()
         return;
     }
 
+    // Get random biom index
+    CurrentBiomeIndex = FMath::RandRange(0, Biomes.Num() - 1);
+
     // Ensure there are enough Biomes to iterate
     if (CurrentBiomeIndex >= Biomes.Num())
     {
@@ -28,8 +31,23 @@ void ALevelManager::SpawnNextBiome()
     // Iterate to spawn level parts for the current biome
     for (int32 i = 0; i < LevelPartsPerBiome; ++i)
     {
+        AGameLevelPart* SpawnedPart;
+
+        // Spawn strut out at the beginning of the biome
+        if (i == 0)
+        {
+            SpawnedPart = SpawnStrutOutLevelPart(CurrentBiome);
+        }
+        // Spawn strut in at the end of the biome 
+        else if (i == LevelPartsPerBiome - 1)
+        {
+            SpawnedPart = SpawnStrutInLevelPart(CurrentBiome);
+        }
         // Spawn a random level part from the current biome
-        AGameLevelPart* SpawnedPart = SpawnRandomLevelPart(CurrentBiome);
+        else
+        {
+            SpawnedPart = SpawnRandomLevelPart(CurrentBiome);
+        }
 
         // If this is not the first level part, connect it to the previous one
         if (GeneratedGameLevelParts.Num() > 0)
@@ -37,19 +55,35 @@ void ALevelManager::SpawnNextBiome()
             ConnectLevelParts(GeneratedGameLevelParts.Last(), SpawnedPart);
         }
 
+        // Spawn objects
+        SpawnedPart->SpawnObjects();
+
         // Add the spawned level part to the array
         GeneratedGameLevelParts.Add(SpawnedPart);
     }
 
-    // TODO: Temporary commented logic below. We must implement logic for biome transition and connector level parts spawn
-    
     // Spawn a connector level part after the generated level parts
-    // AConnectorLevelPart* ConnectorPart = SpawnConnectorLevelPart();
-    // ConnectLevelParts(GeneratedGameLevelParts.Last(), ConnectorPart);
-    // ConnectorLevelParts.Add(ConnectorPart);
+    AConnectorLevelPart* ConnectorLevelPart = SpawnConnectorLevelPart();
+    ConnectLevelParts(GeneratedGameLevelParts.Last(), ConnectorLevelPart);
+    GeneratedGameLevelParts.Add(ConnectorLevelPart);
+
+    // Subscribe to the gateway enter event
+    ConnectorLevelPart->OnGatewayEnterDelegate.AddDynamic(this, &ALevelManager::OnConnectorLevelPartGatewayEnter);
 
     // Move to the next biome for the next spawn
     CurrentBiomeIndex++;
+}
+
+AGameLevelPart* ALevelManager::SpawnStrutInLevelPart(FBiome Biome)
+{
+    // Generate strut in
+    return Biome.GenerateRandomPart(GetWorld(), ELevelPartCategory::StrutIn);
+}
+
+AGameLevelPart* ALevelManager::SpawnStrutOutLevelPart(FBiome Biome)
+{
+    // Generate strut out
+    return Biome.GenerateRandomPart(GetWorld(), ELevelPartCategory::StrutOut);
 }
 
 AGameLevelPart* ALevelManager::SpawnRandomLevelPart(FBiome Biome)
@@ -60,7 +94,7 @@ AGameLevelPart* ALevelManager::SpawnRandomLevelPart(FBiome Biome)
     // In summary, algorithm should check possibility of level spawn at least in two steps further from the current point.
     
     // Randomly select a level part category from the biome
-    ELevelPartCategory RandomCategory = static_cast<ELevelPartCategory>(FMath::RandRange(0, static_cast<int32>(ELevelPartCategory::Elevation)));
+    ELevelPartCategory RandomCategory = static_cast<ELevelPartCategory>(FMath::RandRange(static_cast<int32>(ELevelPartCategory::Straight), static_cast<int32>(ELevelPartCategory::Elevation)));
 
     // Generate a random level part based on the selected category
     return Biome.GenerateRandomPart(GetWorld(), RandomCategory);
@@ -68,13 +102,24 @@ AGameLevelPart* ALevelManager::SpawnRandomLevelPart(FBiome Biome)
 
 AConnectorLevelPart* ALevelManager::SpawnConnectorLevelPart()
 {
-    // Implement logic to spawn a connector level part
-    // You can customize this function based on your connector level part spawning logic
-    return nullptr;
+    return GetWorld()->SpawnActor<AConnectorLevelPart>(ConnectorLevelPartClass);
 }
 
 void ALevelManager::ConnectLevelParts(ABaseLevelPart* PreviousPart, ABaseLevelPart* NextPart)
 {
     // Attach next part to the previous part via connectors
     NextPart->AttachToLevelPart(PreviousPart);
+}
+
+void ALevelManager::OnConnectorLevelPartGatewayEnter(AConnectorLevelPart* ConnectorLevelPart)
+{
+    // Destroy all level parts before connector
+    while (GeneratedGameLevelParts[0] != ConnectorLevelPart)
+    {
+        GeneratedGameLevelParts[0]->Destroy();
+        GeneratedGameLevelParts.RemoveAt(0);
+    }
+
+    // Spawn new biome
+    SpawnNextBiome();
 }

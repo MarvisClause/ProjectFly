@@ -14,6 +14,12 @@ void UObjectSpawnerComponent::BeginPlay()
     Super::BeginPlay();
 }
 
+void UObjectSpawnerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    Super::EndPlay(EndPlayReason);
+    DestroySpawnedObject();
+}
+
 // Spawns an obstacle with probability-based selection
 void UObjectSpawnerComponent::SpawnObstacle()
 {
@@ -52,6 +58,6 @@ void UObjectSpawnerComponent::SpawnObject(const TSubclassOf<AActor> SpawnObject)
     // Implement spawning logic using SpawnObject
     if (SpawnObject)
     {
-        SpawnedObject = GetWorld()->SpawnActor<AActor>(SpawnObject, GetOwner()->GetActorLocation(), FRotator::ZeroRotator);
+        SpawnedObject = GetWorld()->SpawnActor<AActor>(SpawnObject, GetComponentLocation(), FRotator::ZeroRotator);
     }
 }

@@ -36,6 +36,9 @@ public:
     // Called when the game starts
     virtual void BeginPlay() override;
 
+    // Called when the object is destroyed
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
     // Spawns an obstacle with probability-based selection
     UFUNCTION(BlueprintCallable, Category = "Spawn")
     void SpawnObstacle();
