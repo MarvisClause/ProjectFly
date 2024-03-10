@@ -29,9 +29,33 @@ void ALevelManager::SpawnNextBiome()
     // Get the current biome
     FBiome CurrentBiome = Biomes[CurrentBiomeIndex];
 
+    // Error edge value, which defines maximum number of times level manager can try to spawn level part
+    const int32 ErrorEdgeValue = 10;
+    // Error counter
+    int32 ErrorCount = 0;
     // Iterate to spawn level parts for the current biome
     for (int32 I = 0; I < LevelPartsPerBiome; ++I)
     {
+        // If error count larger than edge value, restart generation of the level
+        if (ErrorCount >= ErrorEdgeValue)
+        {
+            while (GeneratedGameLevelParts.Num() > 0)
+            {
+                // If we reached connector part, this means, we have cleared up the level
+                if (GeneratedGameLevelParts[GeneratedGameLevelParts.Num() - 1]->IsA(AConnectorLevelPart::StaticClass()))
+                {
+                    break;
+                }
+
+                GeneratedGameLevelParts[GeneratedGameLevelParts.Num() - 1]->Destroy();
+                GeneratedGameLevelParts.RemoveAt(GeneratedGameLevelParts.Num() - 1);
+            }
+
+            ErrorCount = 0;
+            I = -1;
+            continue;
+        }
+
         AGameLevelPart* SpawnedPart;
 
         // Spawn strut out at the beginning of the biome
@@ -84,6 +108,7 @@ void ALevelManager::SpawnNextBiome()
         if (bHit && !HitResult.GetActor()->IsA(ABaseFlyPlane::StaticClass()))
         {
             --I;
+            ++ErrorCount;
             SpawnedPart->Destroy();
             continue;
         }
@@ -93,6 +118,9 @@ void ALevelManager::SpawnNextBiome()
 
         // Add the spawned level part to the array
         GeneratedGameLevelParts.Add(SpawnedPart);
+
+        // Reset error count
+        ErrorCount = 0;
     }
 
     // Spawn a connector level part after the generated level parts
