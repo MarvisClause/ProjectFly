@@ -45,7 +45,7 @@ void UObjectSpawnerComponent::SpawnBooster()
 // Destroys the currently spawned object
 void UObjectSpawnerComponent::DestroySpawnedObject()
 {
-    if (SpawnedObject)
+    if (IsValid(SpawnedObject))
     {
         SpawnedObject->Destroy();
         SpawnedObject = nullptr;

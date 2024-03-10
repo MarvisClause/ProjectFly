@@ -1,4 +1,5 @@
 #include "ProjectFly/LevelManager/LevelManager.h"
+#include "ProjectFly/Pawns/BaseFlyPlane.h"
 
 ALevelManager::ALevelManager()
 {
@@ -29,17 +30,17 @@ void ALevelManager::SpawnNextBiome()
     FBiome CurrentBiome = Biomes[CurrentBiomeIndex];
 
     // Iterate to spawn level parts for the current biome
-    for (int32 i = 0; i < LevelPartsPerBiome; ++i)
+    for (int32 I = 0; I < LevelPartsPerBiome; ++I)
     {
         AGameLevelPart* SpawnedPart;
 
         // Spawn strut out at the beginning of the biome
-        if (i == 0)
+        if (I == 0)
         {
             SpawnedPart = SpawnStrutOutLevelPart(CurrentBiome);
         }
         // Spawn strut in at the end of the biome 
-        else if (i == LevelPartsPerBiome - 1)
+        else if (I == LevelPartsPerBiome - 1)
         {
             SpawnedPart = SpawnStrutInLevelPart(CurrentBiome);
         }
@@ -53,6 +54,38 @@ void ALevelManager::SpawnNextBiome()
         if (GeneratedGameLevelParts.Num() > 0)
         {
             ConnectLevelParts(GeneratedGameLevelParts.Last(), SpawnedPart);
+        }
+
+        // Perform box cast to check for collisions
+        FVector Origin, Extent;
+        SpawnedPart->GetActorBounds(false, Origin, Extent);
+        FVector BoxLocation = Origin;
+
+        FCollisionQueryParams Params;
+        // Ignore current and previous level part, to which current one will be connected
+        TArray<AActor*> IgnoredActors;
+        IgnoredActors.Add(SpawnedPart);
+        if (GeneratedGameLevelParts.Num() > 0)
+        {
+            IgnoredActors.Add(GeneratedGameLevelParts[GeneratedGameLevelParts.Num() - 1]);
+        }
+        // Ignore previously spawned part
+        Params.AddIgnoredActors(IgnoredActors); 
+
+        FHitResult HitResult;
+        bool bHit = GetWorld()->SweepSingleByChannel(HitResult, BoxLocation, BoxLocation, FQuat::Identity, ECC_WorldStatic, FCollisionShape::MakeBox(SpawnedPart->GetComponentsBoundingBox(true).GetExtent()), Params);
+
+        // For debug purposes (Currently commented)
+        // Draw the box sweep for visualization
+        // DrawDebugBox(GetWorld(), BoxLocation, SpawnedPart->GetComponentsBoundingBox(true).GetExtent(), FColor::Green, true, 1000, 0, 5);
+
+        // TODO: Exception for the base fly plane class can be done better. For instance, we could use special collision channel. 
+        // If there is collision (Except for base fly plane), abort spawn of the part and repeat the process
+        if (bHit && !HitResult.GetActor()->IsA(ABaseFlyPlane::StaticClass()))
+        {
+            --I;
+            SpawnedPart->Destroy();
+            continue;
         }
 
         // Spawn objects
