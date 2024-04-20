@@ -5,6 +5,7 @@
 #include "ProjectFly/LevelManager/Biome.h"
 #include "ProjectFly/LevelManager/Parts/GameLevelPart.h"
 #include "ProjectFly/LevelManager/Parts/ConnectorLevelPart.h"
+#include "ProjectFly/Objects/DeathWall.h"
 #include "LevelManager.generated.h"
 
 UCLASS(Abstract)
@@ -27,6 +28,10 @@ protected:
     // Connector level part class
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LevelManager")
     TSubclassOf<AConnectorLevelPart> ConnectorLevelPartClass;
+
+    // Death wall class
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LevelManager")
+    TSubclassOf<ADeathWall> DeathWallClass;
 
     // TODO: This number should be a somewhat random one, which will allows us to scale level generation size
     // Number of level parts to generate per biome
@@ -59,4 +64,8 @@ private:
     // Array of AGameLevelPart objects
     UPROPERTY()
     TArray<ABaseLevelPart*> GeneratedGameLevelParts;
+
+    // Death wall object
+    UPROPERTY()
+    ADeathWall* DeathWall = nullptr; 
 };

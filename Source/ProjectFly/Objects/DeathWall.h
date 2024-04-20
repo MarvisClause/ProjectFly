@@ -9,6 +9,15 @@
 class UBoxComponent;
 class ABaseFlyPlane;
 
+struct DeathWallMovePoint
+{
+	FVector TargetPosition;
+	FRotator TargetRotation;
+	FVector NewDeathWallBoxExtent;
+	// Defines, if death wall was resized to fit to the move point
+	bool bWasResized = false;
+};
+
 // Chases plane by always moving towards its location and decreasing its speed once collided
 UCLASS(Abstract)
 class PROJECTFLY_API ADeathWall : public AActor
@@ -18,6 +27,15 @@ class PROJECTFLY_API ADeathWall : public AActor
 public:
 	// Sets default values for this actor's properties
 	ADeathWall();
+
+	// Set move point
+	void SetMoveSpeed(float MoveSpeed);
+
+	// Sets move target for the death wall
+	void AddMovePoint(FVector TargetPosition, FRotator TargetRotation, FVector NewDeathWallBoxExtent);
+
+	// Clears all move points
+	void ClearAllMovePoints();
 
 protected:
 	// Called when the game starts or when spawned
@@ -43,7 +61,7 @@ protected:
 
 	// Defines, death wall chase speed
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
-	float ChaseSpeedValue = 1.0f;
+	float MoveSpeedValue = 1.0f;
 
 	// Scene component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -54,10 +72,10 @@ protected:
 	TObjectPtr<UBoxComponent> SpeedDecreaseTriggerArea;
 
 private:
-	// Target plane, which will be followed by death wall
-	TObjectPtr<ABaseFlyPlane> TargetPlane;
-
 	// Affects plane, which enters trigger area
 	// Holds information about plane and booster object influence on it
 	TArray<TTuple<TObjectPtr<ABaseFlyPlane>, float>> AffectedPlanesArray;
+
+	// Move points, where death wall should be
+	TArray<DeathWallMovePoint> DeathWallMovePointArray;
 };

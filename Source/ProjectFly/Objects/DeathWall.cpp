@@ -19,31 +19,29 @@ ADeathWall::ADeathWall()
 	SpeedDecreaseTriggerArea->SetupAttachment(BaseSceneComponent);
 }
 
+void ADeathWall::SetMoveSpeed(float MoveSpeed)
+{
+	MoveSpeedValue = MoveSpeed;
+}
+
+void ADeathWall::AddMovePoint(FVector TargetPosition, FRotator TargetRotation, FVector NewDeathWallBoxExtent)
+{
+	DeathWallMovePoint MovePoint;
+	MovePoint.TargetPosition = TargetPosition;
+	MovePoint.TargetRotation = TargetRotation;
+	MovePoint.NewDeathWallBoxExtent = NewDeathWallBoxExtent;
+
+	DeathWallMovePointArray.Add(MovePoint);
+}
+
+void ADeathWall::ClearAllMovePoints()
+{
+	DeathWallMovePointArray.Empty();
+}
+
 void ADeathWall::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// Find plane in the level
-	// This is temporary solution. I think it is better to handle this through game mode.
-	
-	// Get the world
-	UWorld* World = GetWorld();
-	if (!World) 
-	{
-		return;
-	}
-
-	// Iterate over all actors in the world
-	for (TActorIterator<ABaseFlyPlane> ActorItr(World); ActorItr; ++ActorItr)
-	{
-		ABaseFlyPlane* FoundPlane = *ActorItr;
-
-		if (IsValid(FoundPlane))
-		{
-			TargetPlane = FoundPlane;
-			break; 
-		}
-	}
 
 	SpeedDecreaseTriggerArea->OnComponentBeginOverlap.AddDynamic(this, &ADeathWall::OnTriggerAreaBeginOverlap);
 	SpeedDecreaseTriggerArea->OnComponentEndOverlap.AddDynamic(this, &ADeathWall::OnTriggerAreaEndOverlap);
@@ -53,15 +51,40 @@ void ADeathWall::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// Follow and rotate towards target plane
-	if (IsValid(TargetPlane))
+	if (DeathWallMovePointArray.Num() > 0)
 	{
-		// Calculate direction from ADeathWall to the target plane
-		FVector Direction = TargetPlane->GetActorLocation() - GetActorLocation();
+		// Check, if death wall was resized to fit to the given level part
+		if (DeathWallMovePointArray[0].bWasResized == false)
+		{
+			// Reset scale factor
+			SpeedDecreaseTriggerArea->SetWorldScale3D(FVector(1.0, 1.0, 1.0));
+
+			// Get the size of the level part mesh
+			FVector LevelPartSize = DeathWallMovePointArray[0].NewDeathWallBoxExtent * 2.0f;
+
+			// Get the size of the death wall mesh
+			FVector DeathWallSize = SpeedDecreaseTriggerArea->Bounds.BoxExtent * 2.0f;
+
+			// Calculate the scale factor for each axis
+			FVector ScaleFactor = FVector(LevelPartSize.X / DeathWallSize.X, LevelPartSize.Y / DeathWallSize.Y, LevelPartSize.Z / DeathWallSize.Z);
+			ScaleFactor.X = 50.0f;
+
+			// Set the scale of the death wall mesh to match the size of the level part mesh
+			SpeedDecreaseTriggerArea->SetWorldScale3D(ScaleFactor);
+
+			// Update location of speed decrease trigger area to be above scene component
+			SpeedDecreaseTriggerArea->SetRelativeLocation(FVector(0.0, 0.0, DeathWallMovePointArray[0].NewDeathWallBoxExtent.Z / 2));
+
+			// Update resize marker
+			DeathWallMovePointArray[0].bWasResized = true;
+		}
+
+		// Calculate direction from ADeathWall to the first move point
+		FVector Direction = DeathWallMovePointArray[0].TargetPosition - GetActorLocation();
 
 		// Calculate the rotation around the Z-axis
 		FRotator NewRotation = FRotationMatrix::MakeFromX(Direction).Rotator();
-		FRotator DeltaRotation = NewRotation - GetActorRotation();
+		FRotator DeltaRotation = DeathWallMovePointArray[0].TargetRotation - GetActorRotation();
 		DeltaRotation.Pitch = 0;
 		DeltaRotation.Roll = 0;
 
@@ -72,8 +95,14 @@ void ADeathWall::Tick(float DeltaTime)
 		SetActorRotation(GetActorRotation() + DeltaRotation);
 
 		// Move the ADeathWall towards the target plane
-		FVector TargetLocation = FMath::VInterpTo(GetActorLocation(), TargetPlane->GetActorLocation(), DeltaTime, ChaseSpeedValue);
+		FVector TargetLocation = FMath::VInterpConstantTo(GetActorLocation(), DeathWallMovePointArray[0].TargetPosition, DeltaTime, MoveSpeedValue);
 		SetActorLocation(TargetLocation);
+
+		// Check, if move point was reached
+		if (FVector::Dist(GetActorLocation(), DeathWallMovePointArray[0].TargetPosition) < 10.0f)
+		{
+			DeathWallMovePointArray.RemoveAt(0);
+		}
 	}
 
 	// Decrease plane speed

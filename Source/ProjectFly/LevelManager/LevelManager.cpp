@@ -9,6 +9,16 @@ ALevelManager::ALevelManager()
 
 void ALevelManager::SpawnNextBiome()
 {
+    // Check, if death wall is not initialized
+    if (!IsValid(DeathWall))
+    {
+        DeathWall = GetWorld()->SpawnActor<ADeathWall>(DeathWallClass);
+    }
+    else
+    {
+        DeathWall->ClearAllMovePoints();
+    }
+
     // Ensure Biomes array is not empty
     if (Biomes.Num() == 0)
     {
@@ -128,11 +138,26 @@ void ALevelManager::SpawnNextBiome()
     ConnectLevelParts(GeneratedGameLevelParts.Last(), ConnectorLevelPart);
     GeneratedGameLevelParts.Add(ConnectorLevelPart);
 
+    // Add all generated game level parts to the death wall path 
+    for (int Index = 0; Index < GeneratedGameLevelParts.Num(); ++Index)
+    {
+        // If player enters next biome, teleport death wall to the connector
+        if (Index == 0)
+        {
+            DeathWall->SetActorLocation(GeneratedGameLevelParts[Index]->GetFloorStartConnector()->GetComponentLocation());
+            DeathWall->SetActorRotation(GeneratedGameLevelParts[Index]->GetFloorStartConnector()->GetComponentRotation());
+        }
+
+        FVector Origin, Bounds;
+        GeneratedGameLevelParts[Index]->GetActorBounds(false, Origin, Bounds);
+
+        DeathWall->AddMovePoint(GeneratedGameLevelParts[Index]->GetFloorEndConnector()->GetComponentLocation(),
+            GeneratedGameLevelParts[Index]->GetFloorEndConnector()->GetComponentRotation(),
+            Bounds);
+    }
+
     // Subscribe to the gateway enter event
     ConnectorLevelPart->OnGatewayEnterDelegate.AddDynamic(this, &ALevelManager::OnConnectorLevelPartGatewayEnter);
-
-    // Move to the next biome for the next spawn
-    CurrentBiomeIndex++;
 }
 
 AGameLevelPart* ALevelManager::SpawnStrutInLevelPart(FBiome Biome)
