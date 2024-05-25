@@ -5,21 +5,15 @@
 #include "ObjectSpawnerComponent.generated.h"
 
 USTRUCT(BlueprintType)
-struct FSpawnObstacleData
+struct FSpawnObjectData
 {
     GENERATED_BODY()
 
-    // Add obstacle spawn data here
-    UPROPERTY(EditAnywhere, Category = "SpawnData")
-    TSubclassOf<AActor> ObjectClass;
-};
+    // Spawn chance of object
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = SpawnObjects, meta = (ClampMin = 0.0f, ClampMax = 100.0f))
+    float SpawnChance = 10.0f;
 
-USTRUCT(BlueprintType)
-struct FSpawnBoosterData
-{
-    GENERATED_BODY()
-
-    // Add booster spawn data here
+    // Add object spawn data here
     UPROPERTY(EditAnywhere, Category = "SpawnData")
     TSubclassOf<AActor> ObjectClass;
 };
@@ -50,11 +44,11 @@ public:
 protected:
     // Array of obstacle spawn data
     UPROPERTY(EditAnywhere, Category = "SpawnData")
-    TArray<FSpawnObstacleData> ObstaclesToSpawn;
+    TArray<FSpawnObjectData> ObstaclesToSpawn;
 
     // Array of booster spawn data
     UPROPERTY(EditAnywhere, Category = "SpawnData")
-    TArray<FSpawnBoosterData> BoostersToSpawn;
+    TArray<FSpawnObjectData> BoostersToSpawn;
 
     // Pointer to the currently spawned object
     UPROPERTY(BlueprintReadOnly, Category = "SpawnedObject")
@@ -66,5 +60,5 @@ protected:
 
 private:
     // Spawns an object based on spawn data
-    void SpawnObject(const TSubclassOf<AActor> SpawnObject);
+    void SpawnObject(const FSpawnObjectData&  SpawnObject);
 };

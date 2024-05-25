@@ -27,7 +27,7 @@ void UObjectSpawnerComponent::SpawnObstacle()
     if (ObstaclesToSpawn.Num() > 0)
     {
         int32 RandomIndex = FMath::RandRange(0, ObstaclesToSpawn.Num() - 1);
-        SpawnObject(ObstaclesToSpawn[RandomIndex].ObjectClass);
+        SpawnObject(ObstaclesToSpawn[RandomIndex]);
     }
 }
 
@@ -38,7 +38,7 @@ void UObjectSpawnerComponent::SpawnBooster()
     if (BoostersToSpawn.Num() > 0)
     {
         int32 RandomIndex = FMath::RandRange(0, BoostersToSpawn.Num() - 1);
-        SpawnObject(BoostersToSpawn[RandomIndex].ObjectClass);
+        SpawnObject(BoostersToSpawn[RandomIndex]);
     }
 }
 
@@ -53,11 +53,17 @@ void UObjectSpawnerComponent::DestroySpawnedObject()
 }
 
 // Spawns an object based on spawn data
-void UObjectSpawnerComponent::SpawnObject(const TSubclassOf<AActor> SpawnObject)
+void UObjectSpawnerComponent::SpawnObject(const FSpawnObjectData& SpawnObject)
 {
+    if (!IsValid(SpawnObject.ObjectClass))
+    { 
+        ensureMsgf(IsValid(SpawnObject.ObjectClass), TEXT("Object class was not defined for object spawner data!"));
+        return;
+    }
+
     // Implement spawning logic using SpawnObject
-    if (SpawnObject)
+    if (FMath::RandRange(1, 100) <= SpawnObject.SpawnChance)
     {
-        SpawnedObject = GetWorld()->SpawnActor<AActor>(SpawnObject, GetComponentLocation(), FRotator::ZeroRotator);
+        SpawnedObject = GetWorld()->SpawnActor<AActor>(SpawnObject.ObjectClass, GetComponentLocation(), FRotator::ZeroRotator);
     }
 }
