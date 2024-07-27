@@ -9,6 +9,14 @@ struct FSpawnObjectData
 {
     GENERATED_BODY()
 
+    // Defines if the object needs to be snapped to the floor on spawn
+    UPROPERTY(EditAnywhere, Category = "SpawnData")
+    bool bSnapToFloorOnSpawn = false;
+
+    // Defines if the object needs to be rotated parallel to the floor
+    UPROPERTY(EditAnywhere, Category = "SpawnData")
+    bool bRotateParallelToFloor = false;
+
     // Spawn chance of object
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = SpawnObjects, meta = (ClampMin = 0.0f, ClampMax = 100.0f))
     float SpawnChance = 10.0f;

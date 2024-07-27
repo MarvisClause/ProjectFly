@@ -61,9 +61,48 @@ void UObjectSpawnerComponent::SpawnObject(const FSpawnObjectData& SpawnObject)
         return;
     }
 
+    FVector SpawnPosition = GetComponentLocation();
+    FRotator SpawnRotation = FRotator::ZeroRotator;
+
+    // Check, if object should be altered in some way
+    if (SpawnObject.bSnapToFloorOnSpawn || SpawnObject.bRotateParallelToFloor)
+    {
+        FVector End = SpawnPosition - FVector(0.0f, 0.0f, 10000.0f);
+
+        FHitResult HitResult;
+        FCollisionQueryParams Params;
+        Params.AddIgnoredActor(SpawnedObject);
+
+        if (GetWorld()->LineTraceSingleByChannel(HitResult, SpawnPosition, End, ECC_Visibility, Params))
+        {
+            // Draw the line for debugging
+            DrawDebugLine(GetWorld(), SpawnPosition, End, FColor::Green, false, 1, 0, 1);
+
+            // Snap to the hit location
+            if (SpawnObject.bSnapToFloorOnSpawn)
+            {
+                SpawnPosition = HitResult.Location;
+            }
+
+            // Calculate the rotation to align parallel to the hit surface
+            if (SpawnObject.bRotateParallelToFloor)
+            {
+                FVector SurfaceNormal = HitResult.ImpactNormal;
+                FVector ForwardVector = FVector::CrossProduct(SurfaceNormal, FVector::UpVector).GetSafeNormal();
+                FVector RightVector = FVector::CrossProduct(SurfaceNormal, ForwardVector).GetSafeNormal();
+                SpawnRotation = FRotationMatrix::MakeFromXZ(ForwardVector, SurfaceNormal).Rotator();
+            }
+        }
+        else
+        {
+            // Draw the line for debugging
+            DrawDebugLine(GetWorld(), SpawnPosition, End, FColor::Red, false, 1, 0, 1);
+        }
+    }
+
     // Implement spawning logic using SpawnObject
     if (FMath::RandRange(1, 100) <= SpawnObject.SpawnChance)
     {
-        SpawnedObject = GetWorld()->SpawnActor<AActor>(SpawnObject.ObjectClass, GetComponentLocation(), FRotator::ZeroRotator);
+        SpawnedObject = GetWorld()->SpawnActor<AActor>(SpawnObject.ObjectClass, SpawnPosition, SpawnRotation);
     }
 }
