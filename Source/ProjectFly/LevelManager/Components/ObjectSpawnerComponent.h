@@ -60,7 +60,7 @@ protected:
 
     // Pointer to the currently spawned object
     UPROPERTY(BlueprintReadOnly, Category = "SpawnedObject")
-    AActor* SpawnedObject;
+    AActor* SpawnedObject = nullptr;
 
     // Destroys the currently spawned object
     UFUNCTION(BlueprintCallable, Category = "Spawn")
