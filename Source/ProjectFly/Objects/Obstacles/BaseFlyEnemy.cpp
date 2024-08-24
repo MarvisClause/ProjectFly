@@ -46,15 +46,31 @@ void ABaseFlyEnemy::Tick(float DeltaTime)
             // Smoothly interpolate towards the desired rotation
             FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), DesiredRotation, DeltaTime, RotationSpeed);
             SetActorRotation(NewRotation);
-            StaticMesh->SetWorldRotation(NewRotation);
+
+            // Calculate the angle between the forward vector and the direction to the target
+            float DotProduct = FVector::DotProduct(GetActorForwardVector(), DirectionToTarget);
+            float AngleDegrees = FMath::Acos(DotProduct) * (180.0f / PI);
 
             // Apply force towards the target
-            FVector Force = GetActorForwardVector() * MovementAcceleration;
-            StaticMesh->AddForce(Force, NAME_None, true);
+            float FacingThreshold = 20.0f; 
+            if (AngleDegrees <= FacingThreshold)
+            {
+                FVector Force = GetActorForwardVector() * MovementAcceleration;
+                StaticMesh->AddForce(Force, NAME_None, true);
+            }
 
             // Optional: Set the velocity to a fixed speed
             FVector Velocity = StaticMesh->GetPhysicsLinearVelocity().GetSafeNormal() * MovementSpeed;
             StaticMesh->SetPhysicsLinearVelocity(Velocity);
+
+            // Constrain unwanted rotations
+            FRotator ConstrainedRotation = GetActorRotation();
+            ConstrainedRotation.Roll = 0.0f;  // Lock the Roll axis to prevent spinning
+            SetActorRotation(ConstrainedRotation);
+
+            // Optional: Apply angular damping to reduce spinning from physics
+            StaticMesh->SetAngularDamping(5.0f);  // Adjust this value for the desired damping effect
+            StaticMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);  // Reset angular velocity
 
             // Debug line to visualize the direction to the target
             DrawDebugLine(GetWorld(), GetActorLocation(), LockedTarget->GetActorLocation(), FColor::Red, false, -1.0f, 0, 1.0f);

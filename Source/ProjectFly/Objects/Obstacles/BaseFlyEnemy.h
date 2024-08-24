@@ -41,11 +41,11 @@ protected:
 
     // Defines the enemy speed
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Control", meta = (ClampMin = "0.0"))
-    float MovementSpeed = 1500.0f;
+    float MovementSpeed = 10000.0f;
 
     // Defines the enemy acceleration
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Control", meta = (ClampMin = "0.0"))
-    float MovementAcceleration = 3000.0f;
+    float MovementAcceleration = 25000.0f;
 
     // Rotation speed
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Control", meta = (ClampMin = "0.0"))
