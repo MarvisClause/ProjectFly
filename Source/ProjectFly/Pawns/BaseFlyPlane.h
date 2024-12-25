@@ -48,13 +48,20 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
     float RiseSpeedDecreaseScalar = 4.0f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
-    float AirControl = 9.0f;
+    float AirControl = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
-    float TurbulenceFactor = 6.0f;
+    float MinimumAirControl = 6.0f;
 
-    const float MinimumPlaneSpeed = 0.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
+    float MaximumAirControl = 9.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
+    float TurbulenceFactor = 8.0f;
+
+    // Negative value allows plane to move backwards, thus imitating reversed gliding
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
+    float MinimumPlaneSpeed = -100.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
     float MaximumPlaneSpeed = 3000.0f;
