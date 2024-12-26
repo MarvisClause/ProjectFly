@@ -46,9 +46,10 @@ void ABaseFlyPlane::AddSpeed(float Speed)
 {
     ForwardSpeed = FMath::Clamp(ForwardSpeed + Speed, MinimumPlaneSpeed, MaximumPlaneSpeed);
 
+    // The less speed we have the less control user has over it's plane
     AirControl = FMath::GetMappedRangeValueClamped(
         FVector2D(PlaneSpeedThresholdForPitchDecline, MaximumPlaneSpeed),
-        FVector2D(MaximumAirControl, MinimumAirControl),
+        FVector2D(MinimumAirControl, MaximumAirControl),
         ForwardSpeed
     );
 }
@@ -122,6 +123,8 @@ void ABaseFlyPlane::YawControl(float Value)
     const float TargetYawSpeed = Value * AirControl;
     FVector YawVector = TargetYawSpeed * StaticMesh->GetUpVector();
     StaticMesh->AddTorqueInRadians(YawVector, NAME_None, true);
+	
+    RollControl(-Value);
 }
 
 void ABaseFlyPlane::RollControl(float Value)
@@ -174,14 +177,15 @@ void ABaseFlyPlane::CalculateRotation(float DeltaTime)
         FVector2D(0.0f, 1.0f),
         ForwardSpeed
     );
-    const float DownwardAngleFactor = FMath::Lerp(0.0f, -60.0f, 1.0f - SpeedRatio);
+    const float DownwardAngleFactor = FMath::Lerp(0.0f, -DownwardAngle, 1.0f - SpeedRatio);
     FRotator DownwardRotation = FRotator(DownwardAngleFactor, 0.0f, 0.0f);
 
-    // If plane is diving, don't change it's rotation by downward rotation effect
-    //if (StaticMesh->GetForwardVector().Z <= -0.2)
-    //{
-    //    DownwardRotation = StaticMesh->GetRelativeRotation();
-    //}
+    // If plane is diving, don't change it's rotation by downward rotation effect,
+	// otherwise it will start to rise instead
+    if (StaticMesh->GetRelativeRotation().Pitch <= DownwardRotation.Pitch)
+    {
+        DownwardRotation = StaticMesh->GetRelativeRotation();
+    }
 
     // Interpolate towards the downward-facing rotation
     FRotator TargetRotation = StaticMesh->GetRelativeRotation();
