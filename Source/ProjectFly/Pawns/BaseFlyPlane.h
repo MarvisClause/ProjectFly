@@ -43,18 +43,24 @@ protected:
     // Plane control settings
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
-    float DiveSpeedIncreaseScalar = 2.0f;
+    float DiveSpeedIncreaseScalar = 4.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
-    float RiseSpeedDecreaseScalar = 4.0f;
+    float RiseSpeedDecreaseScalar = 6.0f;
+
+    float AirControl = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
-    float AirControl = 9.0f;
+    float MinimumAirControl = 4.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
-    float TurbulenceFactor = 6.0f;
+    float MaximumAirControl = 8.0f;
 
-    const float MinimumPlaneSpeed = 0.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
+    float TurbulenceFactor = 8.0f;
+
+    // Negative value allows plane to move backwards, thus imitating reversed gliding
+    float MinimumPlaneSpeed = -100.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Control", meta = (ClampMin = 0.0f))
     float MaximumPlaneSpeed = 3000.0f;
@@ -68,6 +74,9 @@ protected:
     // Defines speed threshold, under which plane will start to dive downwards automatically
     const float PlaneSpeedThresholdForPitchDecline = 300.0f;
 
+    // Defines angle of plane fall on low speed
+    const float DownwardAngle = 60.0f;
+
     #pragma endregion
 
     #pragma region CameraControlSettings
@@ -75,10 +84,10 @@ protected:
     // Camera control settings
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Camera Control", meta = (ClampMin = 0.0f))
-    float MinimumCameraBoomLength = 250.0f;
+    float MinimumCameraBoomLength = 200.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Plane Camera Control", meta = (ClampMin = 0.0f))
-    float MaximumCameraBoomLength = 600.0f;
+    float MaximumCameraBoomLength = 300.0f;
 
     #pragma endregion
 

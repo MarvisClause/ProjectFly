@@ -45,6 +45,13 @@ void ABaseFlyPlane::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 void ABaseFlyPlane::AddSpeed(float Speed)
 {
     ForwardSpeed = FMath::Clamp(ForwardSpeed + Speed, MinimumPlaneSpeed, MaximumPlaneSpeed);
+
+    // The less speed we have the less control user has over it's plane
+    AirControl = FMath::GetMappedRangeValueClamped(
+        FVector2D(PlaneSpeedThresholdForPitchDecline, MaximumPlaneSpeed),
+        FVector2D(MinimumAirControl, MaximumAirControl),
+        ForwardSpeed
+    );
 }
 
 float ABaseFlyPlane::GetSpeed() const
@@ -80,7 +87,7 @@ void ABaseFlyPlane::Tick(float DeltaTime)
     {
         StaticMesh->SetMassScale(NAME_None, 1000.0f);
         StaticMesh->SetLinearDamping(0.01f);
-        StaticMesh->SetAngularDamping(5.0f);
+        StaticMesh->SetAngularDamping(2.0f);
     }
     else
     {
@@ -94,7 +101,19 @@ void ABaseFlyPlane::Tick(float DeltaTime)
 
 void ABaseFlyPlane::PitchControl(float Value)
 {
-    const float TargetPitchSpeed = -Value * AirControl;
+    // Calculate speed ratio (scale between 0 and 1 based on speed)
+    const float SpeedRatio = FMath::GetMappedRangeValueClamped(
+        FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
+        FVector2D(0.0f, 1.0f),
+        ForwardSpeed
+    );
+
+    // Adjust Value based on SpeedRatio
+    // Positive Value (nose up) is scaled by SpeedRatio; Negative Value (nose down) is less affected
+    float AdjustedValue = Value > 0.0f ? Value * SpeedRatio : Value * FMath::Lerp(1.0f, 1.5f, 1.0f - SpeedRatio);
+
+    // Calculate the target pitch speed and apply torque
+    const float TargetPitchSpeed = -AdjustedValue * AirControl;
     FVector PitchVector = TargetPitchSpeed * StaticMesh->GetRightVector();
     StaticMesh->AddTorqueInRadians(PitchVector, NAME_None, true);
 }
@@ -104,6 +123,8 @@ void ABaseFlyPlane::YawControl(float Value)
     const float TargetYawSpeed = Value * AirControl;
     FVector YawVector = TargetYawSpeed * StaticMesh->GetUpVector();
     StaticMesh->AddTorqueInRadians(YawVector, NAME_None, true);
+	
+    RollControl(-Value);
 }
 
 void ABaseFlyPlane::RollControl(float Value)
@@ -150,16 +171,30 @@ void ABaseFlyPlane::CalculateRotation(float DeltaTime)
     StaticMesh->AddTorqueInRadians(YawVector, NAME_None, true);
     StaticMesh->AddTorqueInRadians(RollVector, NAME_None, true);
 
-    // Beginning to reduce the pitch angle of the airplane after reaching a speed below a certain value
-    if (ForwardSpeed <= PlaneSpeedThresholdForPitchDecline)
+    // Adjust pitch angle based on speed
+    const float SpeedRatio = FMath::GetMappedRangeValueClamped(
+        FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
+        FVector2D(0.0f, 1.0f),
+        ForwardSpeed
+    );
+    const float DownwardAngleFactor = FMath::Lerp(0.0f, -DownwardAngle, 1.0f - SpeedRatio);
+    FRotator DownwardRotation = FRotator(DownwardAngleFactor, 0.0f, 0.0f);
+
+    // If plane is diving, don't change it's rotation by downward rotation effect,
+	// otherwise it will start to rise instead
+    if (StaticMesh->GetRelativeRotation().Pitch <= DownwardRotation.Pitch)
     {
-        // Make static mesh slowly face downwards
-        GetStaticMesh()->SetRelativeRotation(FMath::Lerp(StaticMesh->GetRelativeRotation(), FVector(StaticMesh->GetForwardVector().X, StaticMesh->GetForwardVector().Y, -1.0f).ToOrientationRotator(), DeltaTime / 10));
+        DownwardRotation = StaticMesh->GetRelativeRotation();
     }
 
-    // Make return to initial state after roll
-    GetStaticMesh()->SetRelativeRotation(FMath::Lerp(StaticMesh->GetRelativeRotation(), CameraBoom->GetForwardVector().ToOrientationRotator(), DeltaTime * AutoRotationPlaneSpeedScalar));
+    // Interpolate towards the downward-facing rotation
+    FRotator TargetRotation = StaticMesh->GetRelativeRotation();
+    TargetRotation.Pitch = FMath::Lerp(TargetRotation.Pitch, DownwardRotation.Pitch, DeltaTime * 0.5f);
+    StaticMesh->SetRelativeRotation(TargetRotation);
 
+    // Return to initial state after roll
+    FRotator FinalRotation = FMath::Lerp(TargetRotation, CameraBoom->GetForwardVector().ToOrientationRotator(), DeltaTime * AutoRotationPlaneSpeedScalar);
+    StaticMesh->SetRelativeRotation(FinalRotation);
 }
 
 void ABaseFlyPlane::UpdateCamera()
