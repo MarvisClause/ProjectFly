@@ -1,4 +1,5 @@
 #include "ProjectFly/LevelManager/Parts/BaseLevelPart.h"
+#include "Engine/StaticMeshSocket.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogBaseLevelPart, Log, Log);
 
@@ -30,6 +31,37 @@ ABaseLevelPart::ABaseLevelPart()
 void ABaseLevelPart::BeginPlay()
 {
     Super::BeginPlay();
+}
+
+void ABaseLevelPart::OnConstruction(const FTransform& Transform)
+{
+    Super::OnConstruction(Transform);
+
+    if (!FloorMesh || !FloorMesh->GetStaticMesh()) return;
+
+    UStaticMesh* Mesh = FloorMesh->GetStaticMesh();
+
+    // List of socket names to attach scene components to
+    TArray<FName> SocketNames = { TEXT("Start"), TEXT("End") };
+
+    for (const FName& SocketName : SocketNames)
+    {
+        if (const UStaticMeshSocket* Socket = Mesh->FindSocket(SocketName))
+        {
+            FTransform SocketTransform;
+            Socket->GetSocketTransform(SocketTransform, FloorMesh);
+
+            if ( SocketName == TEXT("Start") )
+            {
+                FloorStartConnector->SetWorldTransform(SocketTransform);
+            }
+
+            if (SocketName == TEXT("End"))
+            {
+                FloorEndConnector->SetWorldTransform(SocketTransform);
+            }
+        }
+    }
 }
 
 // Returns the start connector component

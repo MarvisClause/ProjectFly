@@ -18,6 +18,8 @@ public:
     // Called when the game starts or when spawned
     virtual void BeginPlay() override;
 
+    virtual void OnConstruction(const FTransform& Transform) override;
+
     // Returns the start connector component
     USceneComponent* GetFloorStartConnector() const;
 
