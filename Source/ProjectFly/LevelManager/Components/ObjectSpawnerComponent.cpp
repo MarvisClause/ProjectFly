@@ -24,7 +24,7 @@ void UObjectSpawnerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void UObjectSpawnerComponent::SpawnObstacle()
 {
     // Implement spawning logic for obstacles with probability
-    if (ObstaclesToSpawn.Num() > 0)
+    if (ObstaclesToSpawn.Num() > 0 && !IsValid(SpawnedObject))
     {
         int32 RandomIndex = FMath::RandRange(0, ObstaclesToSpawn.Num() - 1);
         SpawnObject(ObstaclesToSpawn[RandomIndex]);
@@ -35,7 +35,7 @@ void UObjectSpawnerComponent::SpawnObstacle()
 void UObjectSpawnerComponent::SpawnBooster()
 {
     // Implement spawning logic for boosters with probability
-    if (BoostersToSpawn.Num() > 0)
+    if (BoostersToSpawn.Num() > 0 && !IsValid(SpawnedObject))
     {
         int32 RandomIndex = FMath::RandRange(0, BoostersToSpawn.Num() - 1);
         SpawnObject(BoostersToSpawn[RandomIndex]);
@@ -62,7 +62,7 @@ void UObjectSpawnerComponent::SpawnObject(const FSpawnObjectData& SpawnObject)
     }
 
     FVector SpawnPosition = GetComponentLocation();
-    FRotator SpawnRotation = FRotator::ZeroRotator;
+    FRotator SpawnRotation = GetComponentRotation();
 
     // Check, if object should be altered in some way
     if (SpawnObject.bSnapToFloorOnSpawn || SpawnObject.bRotateParallelToFloor)
