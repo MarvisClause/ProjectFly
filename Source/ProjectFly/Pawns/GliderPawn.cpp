@@ -14,6 +14,7 @@ AGliderPawn::AGliderPawn()
 	MeshComponent->SetEnableGravity(false);
 	MeshComponent->SetLinearDamping(0.7f);   // Slight drag, prevents overspeed
 	MeshComponent->SetAngularDamping(5.0f);  // Dampen rotation for stability
+	MeshComponent->SetNotifyRigidBodyCollision(true);
 	RootComponent = MeshComponent;
 
 	// Spring Arm for camera orbit
@@ -55,132 +56,121 @@ void AGliderPawn::BeginPlay()
 
 	// Add initial speed
 	AffectSpeed(StartPlaneSpeed);
+
+	// Bind the OnComponentHit event
+	MeshComponent->OnComponentHit.AddDynamic(this, &AGliderPawn::OnGliderHit);
 }
 
 void AGliderPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	///////////////// Camera's spring arm length calculation for better view when plane turns /////////////////
+
+	// Calculate turn sharpness: angle between current forward vector and desired direction
+	FVector CurrentForward = MeshComponent->GetForwardVector().GetSafeNormal();
+	FVector TargetDir = (DesiredDirection - MeshComponent->GetComponentLocation()).GetSafeNormal();
+
+	float AngleDegrees = FMath::RadiansToDegrees(acosf(FVector::DotProduct(CurrentForward, TargetDir)));
+	AngleDegrees = FMath::Clamp(AngleDegrees, 0.f, 180.f); // just in case
+
+	// Normalize angle to [0..1] based on max turn angle (e.g., 90 degrees)
+	float NormalizedTurn = FMath::Clamp(AngleDegrees / 90.f, 0.f, 1.f);
+
+	// Interpolate target arm length based on turn sharpness
+	float TargetArmLength = FMath::Lerp(CameraMinDistance, CameraMaxDistance, NormalizedTurn);
+
+	// Smoothly interpolate current arm length to target (use DeltaTime for smoothness)
+	float InterpSpeed = 5.f; // you can tweak this
+	float NewArmLength = FMath::FInterpTo(SpringArm->TargetArmLength, TargetArmLength, DeltaTime, InterpSpeed);
+
+	SpringArm->TargetArmLength = NewArmLength;
+
+	///////////////// Speed and direction calculation /////////////////
+
 	CalculateSpeed(DeltaTime);
 
-	// Clamp and apply camera rotation
+	// Camera/Target update
 	CameraPitch = FMath::Clamp(CameraPitch, -90.f, 90.f);
 	FRotator NewRotation(CameraPitch, CameraYaw, 0.0f);
 	SpringArm->SetWorldRotation(NewRotation);
 
-	// Fly target = camera forward
+	// Target aiming
 	const FVector FlyTarget = MeshComponent->GetComponentLocation() + Camera->GetForwardVector() * 1000.0f;
 	DesiredDirection = FlyTarget;
 
-	// Debug lines
-	const FVector Start = MeshComponent->GetComponentLocation();
-	DrawDebugLine(GetWorld(), Start, Start + MeshComponent->GetForwardVector() * 1000.0f, FColor::Cyan, false, 0.1f, 0, 2.0f);
-	DrawDebugLine(GetWorld(), Start, FlyTarget, FColor::Red, false, 0.1f, 0, 2.0f);
-
-	// Autopilot torque calculation
 	float YawInput, PitchInput, RollInput;
 	RunAutopilot(FlyTarget, YawInput, PitchInput, RollInput);
 
-	// Apply torque (arcade feel: strong responsiveness)
-	const FVector Torque = FVector(
+	FVector Torque = FVector(
 		RollInput * TurnTorque.X,
 		PitchInput * TurnTorque.Y,
 		YawInput * TurnTorque.Z
 	);
 	MeshComponent->AddTorqueInRadians(MeshComponent->GetComponentRotation().RotateVector(Torque), NAME_None, true);
 
-	// Glider simulation
-
+	///////////////// Physics calculation /////////////////
+	
 	float Speed = MeshComponent->GetComponentVelocity().Size();
 	float AoA = MeshComponent->GetForwardVector().Z;
 
-	float LiftSpeedThreshold = 300.0f;
-	float SpeedFactor = FMath::Clamp((Speed - LiftSpeedThreshold) / LiftSpeedThreshold, 0.0f, 1.0f);
+	// Lift drops hard below stall speed
+	float StallSpeed = MinimumPlaneSpeed * 1.2f; // much closer to min speed
+	float LiftFactor = FMath::Clamp((Speed - StallSpeed) / StallSpeed, 0.f, 1.f);
+	LiftFactor *= (1.f - FMath::Abs(AoA) * 0.7f);
 
-	float StallAngle = 0.5f;
-	float LiftCoefficient;
-
-	if (AoA > StallAngle)
-	{
-		LiftCoefficient = FMath::Clamp(1.0f - (AoA - StallAngle) * 5.0f, 0.0f, 1.0f);
-	}
-	else
-	{
-		LiftCoefficient = FMath::Clamp(AoA, 0.0f, 1.0f);
-	}
-
-	LiftCoefficient *= SpeedFactor;
-
-	float LiftForceMag = Speed * Speed * LiftCoefficient * LiftCoefficientScalar;
+	float LiftForceMag = Speed * Speed * LiftFactor * LiftCoefficientScalar;
 	LiftForceMag = FMath::Min(LiftForceMag, MaxLiftForce);
 	FVector LiftForce = FVector::UpVector * LiftForceMag;
 
-	// Full gravity for snappy fall
-	FVector GravityForce = FVector::DownVector * GravityScalar;
+	// Gravity gets strong quickly when slow
+	float GravityBoost = FMath::GetMappedRangeValueClamped(
+		FVector2D(MinimumPlaneSpeed, StallSpeed),
+		FVector2D(1.0f, 3.5f), // up from 2.5f
+		Speed
+	);
 
-	// Quadratic drag force
-	float DragCoefficient = 0.002f;
+	FVector GravityForce = FVector::DownVector * GravityScalar * GravityBoost;
+
+	// Drag: very strong when slow & high AoA
+	float BaseDragCoef = 0.002f;
+	float AoADragBoost = 1.f + FMath::Abs(AoA) * 3.f;
+	float SpeedDragBoost = (Speed < StallSpeed) ? (2.0f - Speed / StallSpeed) : 1.f;
+	float DragCoefficient = BaseDragCoef * AoADragBoost * SpeedDragBoost;
+
 	FVector Velocity = MeshComponent->GetComponentVelocity();
 	FVector DragForce = -Velocity.GetSafeNormal() * Velocity.SizeSquared() * DragCoefficient;
 
 	FVector TotalForce = LiftForce + GravityForce + DragForce + (MeshComponent->GetForwardVector() * ForwardSpeed);
-
 	if (!bIsHalting)
 	{
 		MeshComponent->AddForce(TotalForce);
 	}
+}
 
-	// Debug lift and turbulence
-	DrawDebugLine(GetWorld(), Start, Start + LiftForce * 0.01f, FColor::Green, false, 0.1f, 0, 2.0f);
+void AGliderPawn::CalculateSpeed(float DeltaTime)
+{
+	float Inclination = MeshComponent->GetForwardVector().Z;
 
-	// Dramatic gravity addition
-
-	const float CriticalPitchAngle = 75.0f;
-	float InclinationDegrees = FMath::RadiansToDegrees(FMath::Asin(MeshComponent->GetForwardVector().Z));
-
-	float DramaticGravityMultiplier = 1.0f;
-	bool bCriticalCondition = false;
-
-	// Diving or rising more than critical pitch
-	if (FMath::Abs(InclinationDegrees) > CriticalPitchAngle)
+	if (Inclination < 0)
 	{
-		bCriticalCondition = true;
-
-		if (InclinationDegrees < -CriticalPitchAngle)
-		{
-			// Diving: smoothly increase multiplier up to x5
-			float DiveMultiplier = FMath::GetMappedRangeValueClamped(
-				FVector2D(-CriticalPitchAngle, -90.f),
-				FVector2D(1.0f, 5.0f),
-				InclinationDegrees
-			);
-			DramaticGravityMultiplier = FMath::Max(DramaticGravityMultiplier, DiveMultiplier);
-		}
-		else
-		{
-			// Rising steeply: smoothly increase multiplier up to x4
-			float RiseMultiplier = FMath::GetMappedRangeValueClamped(
-				FVector2D(CriticalPitchAngle, 90.f),
-				FVector2D(1.0f, 4.0f),
-				InclinationDegrees
-			);
-			DramaticGravityMultiplier = FMath::Max(DramaticGravityMultiplier, RiseMultiplier);
-		}
+		// Dive acceleration — steeper dives = much faster acceleration
+		float DiveFactor = FMath::Clamp(-Inclination, 0.f, 1.f);
+		float DiveAcceleration = FMath::Pow(DiveFactor, 1.8f) * (DiveSpeedIncreaseScalar * 1.8f);
+		AffectSpeed(DiveAcceleration * DeltaTime);
 	}
-
-	// Apply dramatic gravity force if any condition met
-	if (bCriticalCondition)
+	else
 	{
-		// Smoothly interpolate to avoid abrupt force application
-		static float SmoothedGravityMultiplier = 1.0f;
-		SmoothedGravityMultiplier = FMath::FInterpTo(SmoothedGravityMultiplier, DramaticGravityMultiplier, DeltaTime, 3.0f);
-
-		FVector DramaticGravityForce = FVector::DownVector * GravityScalar * SmoothedGravityMultiplier;
-		MeshComponent->AddForce(DramaticGravityForce);
-
-		// Optional debug
-		DrawDebugLine(GetWorld(), Start, Start + DramaticGravityForce * 0.01f, FColor::Purple, false, 0.1f, 0, 2.0f);
+		// Climb penalty — stronger than before
+		float RisePenalty = FMath::Pow(Inclination, 1.5f) * (RiseSpeedDecreaseScalar * 1.2f);
+		AffectSpeed(-RisePenalty * DeltaTime);
 	}
+}
+
+void AGliderPawn::OnGliderHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	// Decrease speed 
+	ForwardSpeed -= ForwardSpeed / 2;
 }
 
 void AGliderPawn::AffectSpeed(float Speed)
@@ -195,6 +185,11 @@ void AGliderPawn::AffectSpeed(float Speed)
 	);
 }
 
+UStaticMeshComponent* AGliderPawn::GetStaticMesh() const
+{
+	return MeshComponent;
+}
+
 void AGliderPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -204,28 +199,6 @@ void AGliderPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AGliderPawn::StartDash);
 	PlayerInputComponent->BindAction("Halt", IE_Pressed, this, &AGliderPawn::StartHalt);
-}
-
-void AGliderPawn::CalculateSpeed(float DeltaTime)
-{
-	// Calculate plane inclination
-	float Inclination = MeshComponent->GetForwardVector().Z;
-
-	if (Inclination < 0)
-	{
-		// Drastic dive speed increase: use squared or cubed for non-linear growth
-		float DiveFactor = -Inclination; // Convert to positive
-
-		// Example: cube the factor for strong acceleration at steep dives
-		float DiveAcceleration = FMath::Pow(DiveFactor, 3) * DiveSpeedIncreaseScalar;
-
-		AffectSpeed(DiveAcceleration * DeltaTime);
-	}
-	else
-	{
-		// Normal rise speed decrease remains linear
-		AffectSpeed(-Inclination * RiseSpeedDecreaseScalar * DeltaTime);
-	}
 }
 
 void AGliderPawn::Turn(float Value)

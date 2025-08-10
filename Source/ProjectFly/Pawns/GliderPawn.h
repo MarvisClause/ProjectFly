@@ -22,6 +22,8 @@ public:
 
 	void AffectSpeed(float Speed);
 
+	UStaticMeshComponent* GetStaticMesh() const;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -29,6 +31,9 @@ protected:
 private:
 	// Calculates change of speed from inclination 
 	void CalculateSpeed(float DeltaTime);
+
+	UFUNCTION()
+	void OnGliderHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
 	UPROPERTY(EditAnywhere)
 	class UStaticMeshComponent* MeshComponent;
@@ -58,25 +63,25 @@ private:
 	float AggressiveTurnAngle = 10.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Lift Control", meta = (ClampMin = 0.0f))
-	float LiftCoefficientScalar = 0.004f;
+	float LiftCoefficientScalar = 0.003f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Lift Control", meta = (ClampMin = 0.0f))
-	float MaxLiftForce = 20000.0f;
+	float MaxLiftForce = 5000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control", meta = (ClampMin = 0.0f))
-	float MinimumPlaneSpeed = 3000.0f;
+	float MinimumPlaneSpeed = 0.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control", meta = (ClampMin = 0.0f))
-	float MaximumPlaneSpeed = 20000.0f;
+	float MaximumPlaneSpeed = 100000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control", meta = (ClampMin = 0.0f))
-	float StartPlaneSpeed = 12000.0f;
+	float StartPlaneSpeed = 50000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control", meta = (ClampMin = 0.0f))
-	float DiveSpeedIncreaseScalar = 1000.0f;
+	float DiveSpeedIncreaseScalar = 7000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control", meta = (ClampMin = 0.0f))
-	float RiseSpeedDecreaseScalar = 2500.0f;
+	float RiseSpeedDecreaseScalar = 9000.0f;
 
 	float AirControl = 0.0f;
 
@@ -107,7 +112,7 @@ private:
 	float DashSpeedCost = 500.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
-	float DashStrength = 200000.0f;
+	float DashStrength = 400000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
 	float DashCooldown = 3.0f;
@@ -131,6 +136,13 @@ private:
 
 	bool bCanHalt = true;
 	bool bIsHalting = false;
+
+	// Cameara controls
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
+	float CameraMinDistance = 100.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
+	float CameraMaxDistance = 600.0f;
 
 	// Dash
 	void StartDash();
