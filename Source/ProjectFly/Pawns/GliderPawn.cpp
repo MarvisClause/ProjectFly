@@ -22,7 +22,12 @@ AGliderPawn::AGliderPawn()
 	SpringArm->SetupAttachment(RootComponent);
 	SpringArm->TargetArmLength = 300.f;
 	SpringArm->bUsePawnControlRotation = false;
-	SpringArm->bEnableCameraLag = true;
+
+	SpringArm->bInheritPitch = false;
+	SpringArm->bInheritYaw = false;
+	SpringArm->bInheritRoll = false;
+
+	SpringArm->SetUsingAbsoluteRotation(true); // Decouple from parent’s rotation
 
 	// Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -67,24 +72,28 @@ void AGliderPawn::Tick(float DeltaTime)
 
 	///////////////// Camera's spring arm length calculation for better view when plane turns /////////////////
 
-	// Calculate turn sharpness: angle between current forward vector and desired direction
+	// Calculate turn sharpness
 	FVector CurrentForward = MeshComponent->GetForwardVector().GetSafeNormal();
 	FVector TargetDir = (DesiredDirection - MeshComponent->GetComponentLocation()).GetSafeNormal();
 
-	float AngleDegrees = FMath::RadiansToDegrees(acosf(FVector::DotProduct(CurrentForward, TargetDir)));
-	AngleDegrees = FMath::Clamp(AngleDegrees, 0.f, 180.f); // just in case
+	// Clamp dot to [-1,1] before acos
+	float Dot = FMath::Clamp(FVector::DotProduct(CurrentForward, TargetDir), -1.f, 1.f);
+	float AngleDegrees = FMath::RadiansToDegrees(FMath::Acos(Dot));
 
-	// Normalize angle to [0..1] based on max turn angle (e.g., 90 degrees)
+	// Normalize [0..1] based on max turn angle
 	float NormalizedTurn = FMath::Clamp(AngleDegrees / 90.f, 0.f, 1.f);
 
-	// Interpolate target arm length based on turn sharpness
+	// Compute desired arm length
 	float TargetArmLength = FMath::Lerp(CameraMinDistance, CameraMaxDistance, NormalizedTurn);
 
-	// Smoothly interpolate current arm length to target (use DeltaTime for smoothness)
-	float InterpSpeed = 5.f; // you can tweak this
-	float NewArmLength = FMath::FInterpTo(SpringArm->TargetArmLength, TargetArmLength, DeltaTime, InterpSpeed);
-
-	SpringArm->TargetArmLength = NewArmLength;
+	// Smoothly interpolate with proper speed
+	constexpr float InterpSpeed = 5.f;
+	SpringArm->TargetArmLength = FMath::FInterpTo(
+		SpringArm->TargetArmLength,
+		TargetArmLength,
+		DeltaTime,
+		InterpSpeed
+	);
 
 	///////////////// Speed and direction calculation /////////////////
 
