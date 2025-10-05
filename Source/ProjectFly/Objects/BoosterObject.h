@@ -7,7 +7,7 @@
 #include "BoosterObject.generated.h"
 
 class UBoxComponent;
-class ABaseFlyPlane;
+class AGliderPawn;
 
 // Pushes plane, if it enters booster trigger area
 UCLASS(Abstract)
@@ -32,21 +32,37 @@ protected:
 	UFUNCTION()
 	void OnTriggerAreaEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 	int32 OtherBodyIndex);
+	
+	// Defines, if bost applied to the plane will decrease the further the plane is from the source or not
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Booster")
+	bool bDistanceBasedBoosterPush = true;
+
+	// Defines, if boost applied to the plane will be applied slowly and reach it's max power or instantly
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Booster")
+	bool bIncrementalEnterBoosterPush = true;
+
+	// Defines, if boost applied to the plane will be reduced slowly and reach it's zero power or instantly
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Booster")
+	bool bIncrementalExitBoosterPush = true;
 
 	// Booster speed increase value
 	// Increases speed of the plane
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Booster", meta = (ClampMin = 0.0f))
 	float BoosterSpeedIncreaseValue = 5.0f;
 
 	// Booster push scalar
 	// Pushes plane
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Booster", meta = (ClampMin = 0.0f))
 	float BoosterPushScalar = 500.0f;
 
-	// Booster push scalar
-	// Pushes plane
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control, meta = (ClampMin = 0.0f, ClampMax = 1.0f))
-	float BoosterInfluenceScalar = 0.2f;
+	// Booster rotation scalar
+	// Rotates plane
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Booster", meta = (ClampMin = 0.0f))
+	float BoosterRotationScalar = 2.0f;
+
+	// Defines how long after exit the boost fades
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Booster")
+	float BoosterFalloffDuration = 1.0f;
 
 	// Scene component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -63,5 +79,8 @@ protected:
 private:
 	// Affects plane, which enters trigger area
 	// Holds information about plane and booster object influence on it
-	TArray<TTuple<TObjectPtr<ABaseFlyPlane>, float>> AffectedPlanesArray;
+	TArray<TTuple<TObjectPtr<AGliderPawn>, float>> AffectedGlidersArray;
+
+	// Planes, which are leaving booster area
+	TArray<TPair<TObjectPtr<AGliderPawn>, float>> ExitingGlidersArray;
 };
