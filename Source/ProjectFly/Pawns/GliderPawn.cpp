@@ -72,28 +72,8 @@ void AGliderPawn::Tick(float DeltaTime)
 
 	///////////////// Camera's spring arm length calculation for better view when plane turns /////////////////
 
-	// Calculate turn sharpness
-	FVector CurrentForward = MeshComponent->GetForwardVector().GetSafeNormal();
-	FVector TargetDir = (DesiredDirection - MeshComponent->GetComponentLocation()).GetSafeNormal();
-
-	// Clamp dot to [-1,1] before acos
-	float Dot = FMath::Clamp(FVector::DotProduct(CurrentForward, TargetDir), -1.f, 1.f);
-	float AngleDegrees = FMath::RadiansToDegrees(FMath::Acos(Dot));
-
-	// Normalize [0..1] based on max turn angle
-	float NormalizedTurn = FMath::Clamp(AngleDegrees / 90.f, 0.f, 1.f);
-
-	// Compute desired arm length
-	float TargetArmLength = FMath::Lerp(CameraMinDistance, CameraMaxDistance, NormalizedTurn);
-
-	// Smoothly interpolate with proper speed
-	constexpr float InterpSpeed = 5.f;
-	SpringArm->TargetArmLength = FMath::FInterpTo(
-		SpringArm->TargetArmLength,
-		TargetArmLength,
-		DeltaTime,
-		InterpSpeed
-	);
+	// Calculate camera lag
+	UpdateCameraLagTransition(DeltaTime);
 
 	///////////////// Speed and direction calculation /////////////////
 
@@ -192,6 +172,16 @@ void AGliderPawn::AffectSpeed(float Speed)
 		FVector2D(MinimumAirControl, MaximumAirControl),
 		ForwardSpeed
 	);
+}
+
+void AGliderPawn::StartRemovingCameraLag()
+{
+	CameraLagState = ECameraLagTransitionState::Increasing;
+}
+
+void AGliderPawn::StartEnablingCameraLag()
+{
+	CameraLagState = ECameraLagTransitionState::Decreasing;
 }
 
 UStaticMeshComponent* AGliderPawn::GetStaticMesh() const
@@ -318,4 +308,54 @@ void AGliderPawn::RunAutopilot(const FVector& FlyTarget, float& OutYaw, float& O
 	OutPitch = BasePitch * Responsiveness;
 	OutYaw = BaseYaw * Responsiveness;
 	OutRoll = BaseRoll * Responsiveness;
+}
+
+void AGliderPawn::UpdateCameraLagTransition(float DeltaTime)
+{
+	if (!SpringArm)
+		return;
+
+	switch (CameraLagState)
+	{
+	case ECameraLagTransitionState::Increasing:
+	{
+		// Smoothly increase towards max
+		SpringArm->CameraLagSpeed = FMath::FInterpTo(
+			SpringArm->CameraLagSpeed,
+			MaxLagSpeed,
+			DeltaTime,
+			CameraLagTransitionSpeedToMax
+		);
+
+		// If reached nearly max, stop transition
+		if (FMath::IsNearlyEqual(SpringArm->CameraLagSpeed, MaxLagSpeed, 1.0f))
+		{
+			SpringArm->CameraLagSpeed = MaxLagSpeed;
+			CameraLagState = ECameraLagTransitionState::None;
+		}
+		break;
+	}
+
+	case ECameraLagTransitionState::Decreasing:
+	{
+		// Smoothly decrease towards normal
+		SpringArm->CameraLagSpeed = FMath::FInterpTo(
+			SpringArm->CameraLagSpeed,
+			NormalLagSpeed,
+			DeltaTime,
+			CameraLagTransitionSpeedToNormal
+		);
+
+		// If reached nearly normal, stop transition
+		if (FMath::IsNearlyEqual(SpringArm->CameraLagSpeed, NormalLagSpeed, 1.0f))
+		{
+			SpringArm->CameraLagSpeed = NormalLagSpeed;
+			CameraLagState = ECameraLagTransitionState::None;
+		}
+		break;
+	}
+
+	default:
+		break;
+	}
 }

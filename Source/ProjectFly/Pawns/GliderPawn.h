@@ -22,6 +22,9 @@ public:
 
 	void AffectSpeed(float Speed);
 
+	void StartRemovingCameraLag();
+	void StartEnablingCameraLag();
+
 	UStaticMeshComponent* GetStaticMesh() const;
 
 protected:
@@ -137,12 +140,31 @@ private:
 	bool bCanHalt = true;
 	bool bIsHalting = false;
 
-	// Cameara controls
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
-	float CameraMinDistance = 100.0f;
+	// Camera Settings
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
-	float CameraMaxDistance = 600.0f;
+	float NormalLagSpeed = 15.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
+	float MaxLagSpeed = 1000.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
+	float CameraLagTransitionSpeedToNormal = 2.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
+	float CameraLagTransitionSpeedToMax = 0.05f;
+
+	// Camera Lag Transition State
+	enum class ECameraLagTransitionState
+	{
+		None,
+		Increasing,
+		Decreasing
+	};
+	ECameraLagTransitionState CameraLagState = ECameraLagTransitionState::None;
+
+	// Camera
+	void UpdateCameraLagTransition(float DeltaTime);
 
 	// Dash
 	void StartDash();
