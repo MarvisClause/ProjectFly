@@ -53,88 +53,9 @@ void ABoosterObject::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    // Active gliders in the booster trigger handling
-    for (int32 Index = 0; Index < AffectedGlidersArray.Num(); ++Index)
-    {
-        auto& Pair = AffectedGlidersArray[Index];
-        AGliderPawn* Glider = Pair.Key.Get();
+    HandleActiveGliders(DeltaTime);
 
-        if (!Glider)
-        {
-            AffectedGlidersArray.RemoveAt(Index);
-            --Index;
-            continue;
-        }
-
-        // Calculate distance-based falloff
-        const FVector BoosterCenter = StaticMesh->GetComponentLocation();
-        const FVector GliderLocation = Glider->GetActorLocation();
-        const float Distance = FVector::Dist(BoosterCenter, GliderLocation);
-
-        // Estimate max radius from trigger size
-        const FVector BoxExtent = BoosterTriggerArea->GetScaledBoxExtent();
-        const float MaxDistance = BoxExtent.Size(); // diagonal distance
-        const float DistanceFactor = FMath::Clamp(1.0f - (Distance / MaxDistance), 0.1f, 1.0f);
-
-        // Combine time-based buildup + distance falloff
-        Pair.Value = bIncrementalEnterBoosterPush ? FMath::Clamp(Pair.Value + DeltaTime, 0.f, 1.f) : 1.0f;
-        const float FinalInfluence = Pair.Value * (bDistanceBasedBoosterPush? DistanceFactor : 1.0f);
-
-        // Apply impulse on glider's mesh in booster up direction scaled by BoosterPushScalar and influence
-        Glider->GetStaticMesh()->AddImpulse(StaticMesh->GetUpVector() * BoosterPushScalar * FinalInfluence);
-
-        // Increase forward speed by scaled booster speed increase
-        Glider->AffectSpeed(BoosterSpeedIncreaseValue * FinalInfluence);
-
-        // Smoothly rotate glider toward booster up vector
-        FRotator CurrentRot = Glider->GetStaticMesh()->GetComponentRotation();
-        FRotator TargetRot = StaticMesh->GetUpVector().ToOrientationRotator();
-        FRotator NewRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, BoosterRotationScalar * FinalInfluence);
-        Glider->GetStaticMesh()->SetWorldRotation(NewRot);
-    }
-
-    // Exiting gliders out of the booster trigger handling
-    for (int32 Index = 0; Index < ExitingGlidersArray.Num(); ++Index)
-    {
-        auto& Pair = ExitingGlidersArray[Index];
-        AGliderPawn* Glider = Pair.Key.Get();
-        if (!Glider)
-        {
-            ExitingGlidersArray.RemoveAt(Index--);
-            continue;
-        }
-
-        Pair.Value += DeltaTime;
-        const float Alpha = Pair.Value / BoosterFalloffDuration;
-
-        if (Alpha >= 1.0f)
-        {
-            ExitingGlidersArray.RemoveAt(Index--);
-            continue;
-        }
-
-        // Smooth (nonlinear) falloff: cubic ease-out for smooth end
-        const float FalloffInfluence = FMath::Pow(1.0f - Alpha, 3.0f);
-
-        // Distance-based scaling (optional)
-        const FVector BoosterCenter = StaticMesh->GetComponentLocation();
-        const FVector GliderLocation = Glider->GetActorLocation();
-        const float Distance = FVector::Dist(BoosterCenter, GliderLocation);
-        const float MaxDistance = BoosterTriggerArea->GetScaledBoxExtent().Size();
-        const float DistanceFactor = FMath::Clamp(1.0f - (Distance / MaxDistance), 0.1f, 1.0f);
-
-        // Apply force and speed falloff
-        const float FinalInfluence = FalloffInfluence * (bDistanceBasedBoosterPush ? DistanceFactor : 1.0f);
-
-        Glider->GetStaticMesh()->AddImpulse(StaticMesh->GetUpVector() * BoosterPushScalar * FinalInfluence);
-        Glider->AffectSpeed(BoosterSpeedIncreaseValue * FinalInfluence);
-
-        // Smoothly rotate glider back to its natural orientation or world up
-        FRotator CurrentRot = Glider->GetStaticMesh()->GetComponentRotation();
-        FRotator TargetRot = FRotator(0.f, CurrentRot.Yaw, 0.f); // or Glider->GetActorRotation() if it has a base rotation
-        FRotator NewRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, BoosterRotationScalar * FinalInfluence);
-        Glider->GetStaticMesh()->SetWorldRotation(NewRot);
-    }
+    HandleExitingGliders(DeltaTime);
 
     PrimaryActorTick.SetTickFunctionEnable(AffectedGlidersArray.Num() > 0 || ExitingGlidersArray.Num() > 0);
 }
@@ -171,4 +92,90 @@ void ABoosterObject::OnTriggerAreaEndOverlap(UPrimitiveComponent* OverlappedComp
     }
 
     PrimaryActorTick.SetTickFunctionEnable(AffectedGlidersArray.Num() > 0 || ExitingGlidersArray.Num() > 0);
+}
+
+float ABoosterObject::CalculateDistanceFactor(AGliderPawn* Glider) const
+{
+    const FVector BoosterCenter = StaticMesh->GetComponentLocation();
+    const float Distance = FVector::Dist(BoosterCenter, Glider->GetActorLocation());
+    const float MaxDistance = BoosterTriggerArea->GetScaledBoxExtent().Size();
+    return FMath::Clamp(1.0f - (Distance / MaxDistance), 0.1f, 1.0f);
+}
+
+float ABoosterObject::ComputeFinalInfluence(float BaseInfluence, float DistanceFactor) const
+{
+    return BaseInfluence * (bDistanceBasedBoosterPush ? DistanceFactor : 1.0f);
+}
+
+void ABoosterObject::ApplyBoosterEffect(AGliderPawn* Glider, float Influence, float DeltaTime, bool bAlignToBooster)
+{
+    if (!Glider) return;
+
+    // Affect plane via impulse and update it's speed
+    Glider->GetStaticMesh()->AddImpulse(StaticMesh->GetUpVector() * BoosterPushScalar * Influence);
+    Glider->AffectSpeed(BoosterSpeedIncreaseValue * Influence);
+
+    // Rotate plane according to booster rotation
+    FRotator CurrentRot = Glider->GetStaticMesh()->GetComponentRotation();
+    FRotator TargetRot = bAlignToBooster
+        ? StaticMesh->GetUpVector().ToOrientationRotator()
+        : FRotator(0.f, CurrentRot.Yaw, 0.f);
+
+    FRotator NewRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, BoosterRotationScalar * Influence);
+    Glider->GetStaticMesh()->SetWorldRotation(NewRot);
+}
+
+void ABoosterObject::HandleActiveGliders(float DeltaTime)
+{
+    // Iterate over active gliders
+    for (int32 i = 0; i < AffectedGlidersArray.Num(); ++i)
+    {
+        auto& Pair = AffectedGlidersArray[i];
+        AGliderPawn* Glider = Pair.Key.Get();
+        if (!Glider)
+        {
+            AffectedGlidersArray.RemoveAt(i);
+            continue;
+        }
+
+        // Define influence based on distance and incremental factor, if one is enabled 
+        const float DistanceFactor = CalculateDistanceFactor(Glider);
+        Pair.Value = bIncrementalEnterBoosterPush ? FMath::Clamp(Pair.Value + DeltaTime, 0.f, 1.f) : 1.f;
+        const float FinalInfluence = ComputeFinalInfluence(Pair.Value, DistanceFactor);
+
+        ApplyBoosterEffect(Glider, FinalInfluence, DeltaTime, true);
+    }
+}
+
+void ABoosterObject::HandleExitingGliders(float DeltaTime)
+{
+    // Iterate over exiting gliders
+    for (int32 i = 0; i < ExitingGlidersArray.Num(); ++i)
+    {
+        auto& Pair = ExitingGlidersArray[i];
+        AGliderPawn* Glider = Pair.Key.Get();
+        if (!Glider)
+        {
+            ExitingGlidersArray.RemoveAt(i);
+            continue;
+        }
+
+        // Affect glider for some time before diminishing effect on it
+        Pair.Value += DeltaTime;
+        const float Alpha = Pair.Value / BoosterFalloffDuration;
+
+        // Remove glider once fallof duration is up
+        if (Alpha >= 1.0f)
+        {
+            ExitingGlidersArray.RemoveAt(i);
+            continue;
+        }
+
+        // Calculate diminishing falloff influence
+        const float FalloffInfluence = FMath::Pow(1.0f - Alpha, 3.0f);
+        const float DistanceFactor = CalculateDistanceFactor(Glider);
+        const float FinalInfluence = ComputeFinalInfluence(FalloffInfluence, DistanceFactor);
+
+        ApplyBoosterEffect(Glider, FinalInfluence, DeltaTime, false);
+    }
 }

@@ -77,6 +77,16 @@ protected:
 	TObjectPtr<UBoxComponent> BoosterTriggerArea;
 
 private:
+	float CalculateDistanceFactor(AGliderPawn* Glider) const;
+
+	float ComputeFinalInfluence(float BaseInfluence, float DistanceFactor) const;
+
+	void ApplyBoosterEffect(AGliderPawn* Glider, float Influence, float DeltaTime, bool bAlignToBooster);
+
+	void HandleActiveGliders(float DeltaTime);
+
+	void HandleExitingGliders(float DeltaTime);
+
 	// Affects plane, which enters trigger area
 	// Holds information about plane and booster object influence on it
 	TArray<TTuple<TObjectPtr<AGliderPawn>, float>> AffectedGlidersArray;
