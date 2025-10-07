@@ -143,7 +143,7 @@ private:
 	// Camera Settings
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
-	float NormalLagSpeed = 15.0f;
+	float NormalLagSpeed = 20.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
 	float MaxLagSpeed = 1000.0f;

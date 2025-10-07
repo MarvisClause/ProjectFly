@@ -125,7 +125,7 @@ void ABoosterObject::ApplyBoosterEffect(AGliderPawn* Glider, float Influence, fl
     FRotator CurrentRot = Glider->GetStaticMesh()->GetComponentRotation();
     FRotator TargetRot = bAlignToBooster
         ? StaticMesh->GetUpVector().ToOrientationRotator()
-        : FRotator(0.f, CurrentRot.Yaw, 0.f);
+        : FRotator(Glider->GetStaticMesh()->GetComponentRotation().Pitch, CurrentRot.Yaw, Glider->GetStaticMesh()->GetComponentRotation().Roll);
 
     FRotator NewRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, BoosterRotationScalar * Influence);
     Glider->GetStaticMesh()->SetWorldRotation(NewRot);

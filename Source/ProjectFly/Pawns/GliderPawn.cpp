@@ -20,7 +20,7 @@ AGliderPawn::AGliderPawn()
 	// Spring Arm for camera orbit
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(RootComponent);
-	SpringArm->TargetArmLength = 300.f;
+	SpringArm->TargetArmLength = 400.f;
 	SpringArm->bUsePawnControlRotation = false;
 
 	SpringArm->bInheritPitch = false;
