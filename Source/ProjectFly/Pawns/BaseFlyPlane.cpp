@@ -13,7 +13,6 @@ ABaseFlyPlane::ABaseFlyPlane()
 
     StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
     StaticMesh->SetSimulatePhysics(true);
-    StaticMesh->SetMassOverrideInKg(NAME_None, 0.1f);   // Set the plane's mass (lower value for lighter feel)
     StaticMesh->SetLinearDamping(5.0f);                        // Set the plane's linear damping (lower value for less drag)
     StaticMesh->SetAngularDamping(5.0f);                       // Set the plane's angular damping (lower value for less rotational drag)
     StaticMesh->SetNotifyRigidBodyCollision(true);
