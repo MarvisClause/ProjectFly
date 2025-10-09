@@ -119,7 +119,7 @@ void AGliderPawn::Tick(float DeltaTime)
 		Speed
 	);
 
-	FVector GravityForce = FVector::DownVector * GravityScalar * GravityBoost;
+	FVector GravityForce = FVector::DownVector * GravityScalar * GravityMultiplier * GravityBoost;
 
 	// Drag: very strong when slow & high AoA
 	float BaseDragCoef = 0.002f;
@@ -134,6 +134,33 @@ void AGliderPawn::Tick(float DeltaTime)
 	if (!bIsHalting)
 	{
 		MeshComponent->AddForce(TotalForce);
+	}
+
+	///////////////// Simple Turbulence ///////////////////
+
+	if (!bIsHalting)
+	{
+		// Turbulence increases smoothly with forward speed
+		float TurbulenceStrength = FMath::GetMappedRangeValueClamped(
+			FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
+			FVector2D(0.0f, 1.0f),
+			ForwardSpeed
+		);
+
+		// Scale the torque magnitude
+		float TurbulenceTorque = TurbulenceScalar * TurbulenceStrength; // Tune if too strong/weak
+
+		// Smooth Perlin noise over time
+		float Time = GetWorld()->GetTimeSeconds();
+
+		// Slightly different frequencies for each axis
+		float NoiseX = FMath::PerlinNoise1D(Time * 0.8f) * TurbulenceTorque;
+		float NoiseY = FMath::PerlinNoise1D(Time * 1.1f + 100.f) * TurbulenceTorque;
+		float NoiseZ = FMath::PerlinNoise1D(Time * 0.6f + 200.f) * TurbulenceTorque * 0.3f; // reduce yaw wobble
+
+		FVector RandomTorque = FVector(NoiseX, NoiseY, NoiseZ);
+
+		MeshComponent->AddTorqueInRadians(RandomTorque, NAME_None, true);
 	}
 }
 

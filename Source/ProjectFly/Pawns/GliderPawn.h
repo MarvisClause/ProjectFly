@@ -163,6 +163,10 @@ private:
 	};
 	ECameraLagTransitionState CameraLagState = ECameraLagTransitionState::None;
 
+	// Turbulence
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Turbulence")
+	float TurbulenceScalar = 0.5f;
+
 	// Camera
 	void UpdateCameraLagTransition(float DeltaTime);
 
