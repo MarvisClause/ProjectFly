@@ -67,6 +67,7 @@ void ABoosterObject::OnTriggerAreaBeginOverlap(UPrimitiveComponent* OverlappedCo
     {
         // Remove existing entry if any
         AffectedGlidersArray.RemoveAll([Glider](const TTuple<TObjectPtr<AGliderPawn>, float>& Elem) { return Elem.Key == Glider; });
+        ExitingGlidersArray.RemoveAll([Glider](const TTuple<TObjectPtr<AGliderPawn>, float>& Elem) { return Elem.Key == Glider; });
 
         // Add with zero influence
         AffectedGlidersArray.Add(TTuple<TObjectPtr<AGliderPawn>, float>(Glider, 0.f));
