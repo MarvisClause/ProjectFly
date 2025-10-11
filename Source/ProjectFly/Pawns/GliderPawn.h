@@ -166,7 +166,7 @@ private:
 
 	// Turbulence
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Turbulence")
-	float TurbulenceScalar = 0.5f;
+	float TurbulenceScalar = 3.0f;
 
 	// Camera
 	void UpdateCameraLagTransition(float DeltaTime);
