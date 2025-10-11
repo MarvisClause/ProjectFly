@@ -79,7 +79,7 @@ private:
 	float MaximumPlaneSpeed = 160000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control", meta = (ClampMin = 0.0f))
-	float StartPlaneSpeed = 32000.0f;
+	float StartPlaneSpeed = 80000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control", meta = (ClampMin = 0.0f))
 	float DiveSpeedIncreaseScalar = 30000.0f;
@@ -87,13 +87,11 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control", meta = (ClampMin = 0.0f))
 	float RiseSpeedDecreaseScalar = 32000.0f;
 
-	float AirControl = 0.0f;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Air Control", meta = (ClampMin = 0.0f, ClampMax = 1.0f))
+	float MinimumAirControl = 0.1f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Air Control", meta = (ClampMin = 0.0f))
-	float MinimumAirControl = 1.0f;
-
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Air Control", meta = (ClampMin = 0.0f))
-	float MaximumAirControl = 8.0f;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Air Control", meta = (ClampMin = 0.0f, ClampMax = 1.0f))
+	float MaximumAirControl = 1.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Gravity Control", meta = (ClampMin = 0.0f))
 	float GravityScalar = 2500.0f;

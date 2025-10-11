@@ -205,13 +205,6 @@ void AGliderPawn::OnGliderHit(UPrimitiveComponent* HitComponent, AActor* OtherAc
 void AGliderPawn::AffectSpeed(float Speed)
 {
 	ForwardSpeed = FMath::Clamp(ForwardSpeed + Speed, MinimumPlaneSpeed, MaximumPlaneSpeed);
-
-	// The less speed we have the less control user has over it's plane
-	AirControl = FMath::GetMappedRangeValueClamped(
-		FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
-		FVector2D(MinimumAirControl, MaximumAirControl),
-		ForwardSpeed
-	);
 }
 
 void AGliderPawn::StartRemovingCameraLag()
@@ -339,9 +332,9 @@ void AGliderPawn::RunAutopilot(const FVector& FlyTarget, float& OutYaw, float& O
 	// Calculate responsiveness factor [0..1] based on ForwardSpeed
 	// Normalize AirControl between MinimumAirControl and MaximumAirControl to [0..1]
 	float Responsiveness = FMath::GetMappedRangeValueClamped(
+		FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
 		FVector2D(MinimumAirControl, MaximumAirControl),
-		FVector2D(0.1f, 1.0f),
-		AirControl
+		ForwardSpeed
 	);
 
 	// Normal autopilot control with responsiveness scaling
