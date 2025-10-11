@@ -20,7 +20,7 @@ AGliderPawn::AGliderPawn()
 	// Spring Arm for camera orbit
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(RootComponent);
-	SpringArm->TargetArmLength = 400.f;
+	SpringArm->TargetArmLength = 450.f;
 	SpringArm->bUsePawnControlRotation = false;
 
 	SpringArm->bInheritPitch = false;
@@ -32,6 +32,16 @@ AGliderPawn::AGliderPawn()
 	// Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm);
+}
+
+void AGliderPawn::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	if (MeshComponent)
+	{
+		MeshComponent->SetMassOverrideInKg(NAME_None, 7.0f);
+	}
 }
 
 FVector AGliderPawn::GetTargetAimWorldLocation() const
@@ -58,6 +68,9 @@ void AGliderPawn::SetDesiredDirection(FVector WorldDirection)
 void AGliderPawn::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Update camera lag speed
+	StartEnablingCameraLag();
 
 	// Add initial speed
 	AffectSpeed(StartPlaneSpeed);
@@ -104,7 +117,7 @@ void AGliderPawn::Tick(float DeltaTime)
 	float AoA = MeshComponent->GetForwardVector().Z;
 
 	// Lift drops hard below stall speed
-	float StallSpeed = MinimumPlaneSpeed * 1.2f; // much closer to min speed
+	float StallSpeed = MinimumPlaneSpeed * 1.2f;
 	float LiftFactor = FMath::Clamp((Speed - StallSpeed) / StallSpeed, 0.f, 1.f);
 	LiftFactor *= (1.f - FMath::Abs(AoA) * 0.7f);
 
@@ -148,7 +161,7 @@ void AGliderPawn::Tick(float DeltaTime)
 		);
 
 		// Scale the torque magnitude
-		float TurbulenceTorque = TurbulenceScalar * TurbulenceStrength; // Tune if too strong/weak
+		float TurbulenceTorque = TurbulenceScalar * TurbulenceStrength;
 
 		// Smooth Perlin noise over time
 		float Time = GetWorld()->GetTimeSeconds();
@@ -156,7 +169,7 @@ void AGliderPawn::Tick(float DeltaTime)
 		// Slightly different frequencies for each axis
 		float NoiseX = FMath::PerlinNoise1D(Time * 0.8f) * TurbulenceTorque;
 		float NoiseY = FMath::PerlinNoise1D(Time * 1.1f + 100.f) * TurbulenceTorque;
-		float NoiseZ = FMath::PerlinNoise1D(Time * 0.6f + 200.f) * TurbulenceTorque * 0.3f; // reduce yaw wobble
+		float NoiseZ = FMath::PerlinNoise1D(Time * 0.6f + 200.f) * TurbulenceTorque * 0.3f;
 
 		FVector RandomTorque = FVector(NoiseX, NoiseY, NoiseZ);
 
@@ -170,14 +183,14 @@ void AGliderPawn::CalculateSpeed(float DeltaTime)
 
 	if (Inclination < 0)
 	{
-		// Dive acceleration — steeper dives = much faster acceleration
+		// Dive acceleration
 		float DiveFactor = FMath::Clamp(-Inclination, 0.f, 1.f);
 		float DiveAcceleration = FMath::Pow(DiveFactor, 1.8f) * (DiveSpeedIncreaseScalar * 1.8f);
 		AffectSpeed(DiveAcceleration * DeltaTime);
 	}
 	else
 	{
-		// Climb penalty — stronger than before
+		// Climb penalty
 		float RisePenalty = FMath::Pow(Inclination, 1.5f) * (RiseSpeedDecreaseScalar * 1.2f);
 		AffectSpeed(-RisePenalty * DeltaTime);
 	}
@@ -244,7 +257,7 @@ void AGliderPawn::StartDash()
 		bCanDash = false;
 
 		// Add impulse, which will imitate dash
-		MeshComponent->AddForce(MeshComponent->GetForwardVector() * DashStrength, NAME_None, true);
+		MeshComponent->AddForce(MeshComponent->GetForwardVector() * DashStrength, NAME_None, false);
 
 		// Dash will cost plane forward speed
 		AffectSpeed(-DashSpeedCost);

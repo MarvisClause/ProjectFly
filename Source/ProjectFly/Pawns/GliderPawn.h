@@ -12,6 +12,7 @@ class PROJECTFLY_API AGliderPawn : public APawn, public IFlightMouseAimInterface
 
 public:
 	AGliderPawn();
+	virtual void OnConstruction(const FTransform& Transform) override;
 
 	virtual FVector GetTargetAimWorldLocation() const override;
 	virtual FVector GetCurrentDirection() const override;
@@ -60,7 +61,7 @@ private:
 	float MouseSensitivity = 1.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Turn Control", meta = (ClampMin = 0.0f))
-	float TurnAngleSensitivity = 1.0f;
+	float TurnAngleSensitivity = 1.8f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Turn Control", meta = (ClampMin = 0.0f))
 	float AggressiveTurnAngle = 10.0f;
@@ -71,20 +72,20 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Lift Control", meta = (ClampMin = 0.0f))
 	float MaxLiftForce = 5000.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control", meta = (ClampMin = 0.0f))
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control")
 	float MinimumPlaneSpeed = 0.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control", meta = (ClampMin = 0.0f))
-	float MaximumPlaneSpeed = 100000.0f;
+	float MaximumPlaneSpeed = 160000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control", meta = (ClampMin = 0.0f))
-	float StartPlaneSpeed = 50000.0f;
+	float StartPlaneSpeed = 32000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control", meta = (ClampMin = 0.0f))
-	float DiveSpeedIncreaseScalar = 7000.0f;
+	float DiveSpeedIncreaseScalar = 30000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control", meta = (ClampMin = 0.0f))
-	float RiseSpeedDecreaseScalar = 9000.0f;
+	float RiseSpeedDecreaseScalar = 32000.0f;
 
 	float AirControl = 0.0f;
 
@@ -115,7 +116,7 @@ private:
 	float DashSpeedCost = 500.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
-	float DashStrength = 400000.0f;
+	float DashStrength = 1600000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
 	float DashCooldown = 3.0f;
@@ -143,7 +144,7 @@ private:
 	// Camera Settings
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
-	float NormalLagSpeed = 20.0f;
+	float NormalLagSpeed = 25.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
 	float MaxLagSpeed = 1000.0f;
