@@ -8,8 +8,8 @@ ABoosterObject::ABoosterObject()
     PrimaryActorTick.bCanEverTick = true;
     PrimaryActorTick.bStartWithTickEnabled = false;
 
-    BaseSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("BaseSceneComponent"));
-    SetRootComponent(BaseSceneComponent);
+    RootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootSceneComponent"));
+    SetRootComponent(RootSceneComponent);
 
     StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
     StaticMesh->SetupAttachment(RootComponent);

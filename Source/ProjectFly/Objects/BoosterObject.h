@@ -66,7 +66,7 @@ protected:
 
 	// Scene component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<USceneComponent> BaseSceneComponent;
+	TObjectPtr<USceneComponent> RootSceneComponent;
 
 	// Static mesh
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
