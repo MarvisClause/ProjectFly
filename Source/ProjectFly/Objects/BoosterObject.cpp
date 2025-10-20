@@ -128,6 +128,9 @@ void ABoosterObject::ApplyBoosterEffect(AGliderPawn* Glider, float Influence, fl
         ? StaticMesh->GetUpVector().ToOrientationRotator()
         : FRotator(Glider->GetStaticMesh()->GetComponentRotation().Pitch, CurrentRot.Yaw, Glider->GetStaticMesh()->GetComponentRotation().Roll);
 
+    // Do not affect roll
+    TargetRot.Roll = 0.0f;
+
     FRotator NewRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, BoosterRotationScalar * Influence);
     Glider->GetStaticMesh()->SetWorldRotation(NewRot);
 }

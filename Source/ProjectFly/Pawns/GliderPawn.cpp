@@ -12,8 +12,10 @@ AGliderPawn::AGliderPawn()
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
 	MeshComponent->SetSimulatePhysics(true);
 	MeshComponent->SetEnableGravity(false);
-	MeshComponent->SetLinearDamping(0.7f);   // Slight drag, prevents overspeed
-	MeshComponent->SetAngularDamping(5.0f);  // Dampen rotation for stability
+	// Slight drag, prevents overspeed
+	MeshComponent->SetLinearDamping(0.7f);
+	// Dampen rotation for stability
+	MeshComponent->SetAngularDamping(5.0f);
 	MeshComponent->SetNotifyRigidBodyCollision(true);
 	RootComponent = MeshComponent;
 
@@ -27,11 +29,21 @@ AGliderPawn::AGliderPawn()
 	SpringArm->bInheritYaw = false;
 	SpringArm->bInheritRoll = false;
 
-	SpringArm->SetUsingAbsoluteRotation(true); // Decouple from parent’s rotation
+	// Decouple from parent’s rotation
+	SpringArm->SetUsingAbsoluteRotation(true);
 
 	// Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm);
+
+	// Update tick groups for actor to handle issue with camera jittering, when camera lag in spring arm is enabled
+	PrimaryActorTick.bStartWithTickEnabled = true;
+	PrimaryActorTick.TickGroup = TG_PrePhysics;
+	MeshComponent->SetTickGroup(TG_PrePhysics);
+
+	// Make spring arm tick after physics has settled
+	SpringArm->PrimaryComponentTick.TickGroup = TG_PostPhysics;
+	Camera->PrimaryComponentTick.TickGroup = TG_PostPhysics;
 }
 
 void AGliderPawn::OnConstruction(const FTransform& Transform)
@@ -97,19 +109,22 @@ void AGliderPawn::Tick(float DeltaTime)
 	FRotator NewRotation(CameraPitch, CameraYaw, 0.0f);
 	SpringArm->SetWorldRotation(NewRotation);
 
-	// Target aiming
-	const FVector FlyTarget = MeshComponent->GetComponentLocation() + Camera->GetForwardVector() * 1000.0f;
-	DesiredDirection = FlyTarget;
+	if (bEnableAutopilot)
+	{
+		// Autopilot calculation
+		const FVector FlyTarget = MeshComponent->GetComponentLocation() + Camera->GetForwardVector() * 1000.0f;
+		DesiredDirection = FlyTarget;
 
-	float YawInput, PitchInput, RollInput;
-	RunAutopilot(FlyTarget, YawInput, PitchInput, RollInput);
+		float YawInput, PitchInput, RollInput;
+		RunAutopilot(FlyTarget, YawInput, PitchInput, RollInput);
 
-	FVector Torque = FVector(
-		RollInput * TurnTorque.X,
-		PitchInput * TurnTorque.Y,
-		YawInput * TurnTorque.Z
-	);
-	MeshComponent->AddTorqueInRadians(MeshComponent->GetComponentRotation().RotateVector(Torque), NAME_None, true);
+		FVector Torque = FVector(
+			RollInput * TurnTorque.X,
+			PitchInput * TurnTorque.Y,
+			YawInput * TurnTorque.Z
+		);
+		MeshComponent->AddTorqueInRadians(MeshComponent->GetComponentRotation().RotateVector(Torque), NAME_None, true);
+	}
 
 	///////////////// Physics calculation /////////////////
 	
@@ -229,6 +244,10 @@ void AGliderPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAxis("Turn", this, &AGliderPawn::Turn);
 	PlayerInputComponent->BindAxis("LookUp", this, &AGliderPawn::LookUp);
 
+	PlayerInputComponent->BindAxis("MovePitch", this, &AGliderPawn::MovePitch);
+	PlayerInputComponent->BindAxis("MoveYaw", this, &AGliderPawn::MoveYaw);
+	PlayerInputComponent->BindAxis("MoveRoll", this, &AGliderPawn::MoveRoll);
+
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AGliderPawn::StartDash);
 	PlayerInputComponent->BindAction("Halt", IE_Pressed, this, &AGliderPawn::StartHalt);
 }
@@ -236,6 +255,75 @@ void AGliderPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 void AGliderPawn::Turn(float Value)
 {
 	CameraYaw += Value * MouseSensitivity;
+}
+
+void AGliderPawn::MovePitch(float Value)
+{
+	if (FMath::Abs(Value) <= KINDA_SMALL_NUMBER)
+	{
+		return;
+	}
+
+	DisableAutopilotTemporarily();
+
+	float Responsiveness = FMath::GetMappedRangeValueClamped(
+		FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
+		FVector2D(MinimumAirControl, MaximumAirControl),
+		ForwardSpeed
+	);
+
+	FVector Torque = FVector(
+		0.0f,
+		Value * Responsiveness * KeyResponsivenessScalar,
+		0.0f
+	);
+	MeshComponent->AddTorqueInRadians(MeshComponent->GetComponentRotation().RotateVector(Torque), NAME_None, true);
+}
+
+void AGliderPawn::MoveYaw(float Value)
+{
+	if (FMath::Abs(Value) <= KINDA_SMALL_NUMBER)
+	{
+		return;
+	}
+
+	DisableAutopilotTemporarily();
+
+	float Responsiveness = FMath::GetMappedRangeValueClamped(
+		FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
+		FVector2D(MinimumAirControl, MaximumAirControl),
+		ForwardSpeed
+	);
+
+	FVector Torque = FVector(
+		0.0f,
+		0.0f,
+		Value * Responsiveness * KeyResponsivenessScalar
+	);
+	MeshComponent->AddTorqueInRadians(MeshComponent->GetComponentRotation().RotateVector(Torque), NAME_None, true);
+}
+
+void AGliderPawn::MoveRoll(float Value)
+{
+	if (FMath::Abs(Value) <= KINDA_SMALL_NUMBER)
+	{
+		return;
+	}
+
+	DisableAutopilotTemporarily();
+
+	float Responsiveness = FMath::GetMappedRangeValueClamped(
+		FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
+		FVector2D(MinimumAirControl, MaximumAirControl),
+		ForwardSpeed
+	);
+
+	FVector Torque = FVector(
+		Value * Responsiveness * KeyResponsivenessScalar,
+		0.0f,
+		0.0f
+	);
+	MeshComponent->AddTorqueInRadians(MeshComponent->GetComponentRotation().RotateVector(Torque), NAME_None, true);
 }
 
 void AGliderPawn::StartDash()
@@ -341,6 +429,20 @@ void AGliderPawn::RunAutopilot(const FVector& FlyTarget, float& OutYaw, float& O
 	OutPitch = BasePitch * Responsiveness;
 	OutYaw = BaseYaw * Responsiveness;
 	OutRoll = BaseRoll * Responsiveness;
+}
+
+void AGliderPawn::DisableAutopilotTemporarily()
+{
+	bEnableAutopilot = false;
+
+	// Reset the timer each time we detect input
+	GetWorld()->GetTimerManager().ClearTimer(AutopilotEnableTimer);
+	GetWorld()->GetTimerManager().SetTimer(AutopilotEnableTimer, this, &AGliderPawn::EnableAutopilot, ManualControlTimeout, false);
+}
+
+void AGliderPawn::EnableAutopilot()
+{
+	bEnableAutopilot = true;
 }
 
 void AGliderPawn::UpdateCameraLagTransition(float DeltaTime)

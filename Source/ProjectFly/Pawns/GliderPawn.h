@@ -166,6 +166,20 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Turbulence")
 	float TurbulenceScalar = 3.0f;
 
+	// Key responsiveness
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control")
+	float KeyResponsivenessScalar = 10.0f;
+
+	// Boolean variable, which controls autopilot work
+	bool bEnableAutopilot = true;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Manual Control Timeout")
+	float ManualControlTimeout = 2.0f;
+	FTimerHandle AutopilotEnableTimer;
+
+	// Autopilot controls
+	void DisableAutopilotTemporarily();
+	void EnableAutopilot();
+
 	// Camera
 	void UpdateCameraLagTransition(float DeltaTime);
 
@@ -181,6 +195,11 @@ private:
 	// Mouse input handlers
 	void LookUp(float Value);
 	void Turn(float Value);
+
+	// Keys input handlers
+	void MovePitch(float Value);
+	void MoveYaw(float Value);
+	void MoveRoll(float Value);
 
 	void RunAutopilot(const FVector& FlyTarget, float& OutYaw, float& OutPitch, float& OutRoll);
 };
