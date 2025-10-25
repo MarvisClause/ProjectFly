@@ -109,7 +109,7 @@ void AGliderPawn::Tick(float DeltaTime)
 	FRotator NewRotation(CameraPitch, CameraYaw, 0.0f);
 	SpringArm->SetWorldRotation(NewRotation);
 
-	if (bEnableAutopilot)
+	if (!bDisableAutopilot)
 	{
 		// Autopilot calculation
 		const FVector FlyTarget = MeshComponent->GetComponentLocation() + Camera->GetForwardVector() * 1000.0f;
@@ -268,13 +268,13 @@ void AGliderPawn::MovePitch(float Value)
 
 	float Responsiveness = FMath::GetMappedRangeValueClamped(
 		FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
-		FVector2D(MinimumAirControl, MaximumAirControl),
+		FVector2D(PitchMinKeyResponsivenessScalar, PitchMaxKeyResponsivenessScalar),
 		ForwardSpeed
 	);
 
 	FVector Torque = FVector(
 		0.0f,
-		Value * Responsiveness * KeyResponsivenessScalar,
+		Value * Responsiveness,
 		0.0f
 	);
 	MeshComponent->AddTorqueInRadians(MeshComponent->GetComponentRotation().RotateVector(Torque), NAME_None, true);
@@ -290,15 +290,15 @@ void AGliderPawn::MoveYaw(float Value)
 	DisableAutopilotTemporarily();
 
 	float Responsiveness = FMath::GetMappedRangeValueClamped(
-		FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
 		FVector2D(MinimumAirControl, MaximumAirControl),
+		FVector2D(YawMinKeyResponsivenessScalar, YawMaxKeyResponsivenessScalar),
 		ForwardSpeed
 	);
 
 	FVector Torque = FVector(
 		0.0f,
 		0.0f,
-		Value * Responsiveness * KeyResponsivenessScalar
+		Value * Responsiveness
 	);
 	MeshComponent->AddTorqueInRadians(MeshComponent->GetComponentRotation().RotateVector(Torque), NAME_None, true);
 }
@@ -310,16 +310,16 @@ void AGliderPawn::MoveRoll(float Value)
 		return;
 	}
 
-	DisableAutopilotTemporarily();
+	DisableAggressiveTurnAngleTemporarily();
 
 	float Responsiveness = FMath::GetMappedRangeValueClamped(
 		FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
-		FVector2D(MinimumAirControl, MaximumAirControl),
+		FVector2D(RollMinKeyResponsivenessScalar, RollMaxKeyResponsivenessScalar),
 		ForwardSpeed
 	);
 
 	FVector Torque = FVector(
-		Value * Responsiveness * KeyResponsivenessScalar,
+		Value * Responsiveness,
 		0.0f,
 		0.0f
 	);
@@ -433,16 +433,41 @@ void AGliderPawn::RunAutopilot(const FVector& FlyTarget, float& OutYaw, float& O
 
 void AGliderPawn::DisableAutopilotTemporarily()
 {
-	bEnableAutopilot = false;
+	bDisableAutopilot = true;
 
-	// Reset the timer each time we detect input
-	GetWorld()->GetTimerManager().ClearTimer(AutopilotEnableTimer);
-	GetWorld()->GetTimerManager().SetTimer(AutopilotEnableTimer, this, &AGliderPawn::EnableAutopilot, ManualControlTimeout, false);
+	GetWorld()->GetTimerManager().ClearTimer(DisableAutopilotEnableTimer);
+	GetWorldTimerManager().SetTimer(
+		DisableAutopilotEnableTimer,
+		[this]()
+		{
+			bDisableAutopilot = false;
+		},
+		DisableAutopilotTimeout,
+		false
+	);
 }
 
-void AGliderPawn::EnableAutopilot()
+void AGliderPawn::DisableAggressiveTurnAngleTemporarily()
 {
-	bEnableAutopilot = true;
+	if (GetWorldTimerManager().IsTimerActive(EnableAggressiveTurnAngleTimer))
+	{
+		return;
+	}
+	
+	float OldAggressiveTurnValue = AggressiveTurnAngle;
+	AggressiveTurnAngle = 0.0f;
+
+	// Reset the timer each time we detect input
+	GetWorld()->GetTimerManager().ClearTimer(EnableAggressiveTurnAngleTimer);
+	GetWorldTimerManager().SetTimer(
+		EnableAggressiveTurnAngleTimer,
+		[this, OldAggressiveTurnValue]()
+		{
+			AggressiveTurnAngle = OldAggressiveTurnValue;
+		},
+		AggressiveTurnAngleDisableTimeout,
+		false
+	);
 }
 
 void AGliderPawn::UpdateCameraLagTransition(float DeltaTime)

@@ -88,7 +88,7 @@ private:
 	float RiseSpeedDecreaseScalar = 32000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Air Control", meta = (ClampMin = 0.0f, ClampMax = 1.0f))
-	float MinimumAirControl = 0.1f;
+	float MinimumAirControl = 0.3f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Air Control", meta = (ClampMin = 0.0f, ClampMax = 1.0f))
 	float MaximumAirControl = 1.0f;
@@ -167,18 +167,37 @@ private:
 	float TurbulenceScalar = 3.0f;
 
 	// Key responsiveness
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control")
-	float KeyResponsivenessScalar = 10.0f;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response")
+	float PitchMinKeyResponsivenessScalar = 10.0f;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response")
+	float PitchMaxKeyResponsivenessScalar = 15.0f;
 
-	// Boolean variable, which controls autopilot work
-	bool bEnableAutopilot = true;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response")
+	float YawMinKeyResponsivenessScalar = 5.0f;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response")
+	float YawMaxKeyResponsivenessScalar = 10.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response")
+	float RollMinKeyResponsivenessScalar = 15.0f;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response")
+	float RollMaxKeyResponsivenessScalar = 20.0f;
+
+	// Timer for roll logic control
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Aggressive Turn Angle Disable Timeout")
+	float AggressiveTurnAngleDisableTimeout = 0.5f;
+	FTimerHandle EnableAggressiveTurnAngleTimer;
+
+	// Boolean variable, which controls autopilot pitch and roll
+	bool bDisableAutopilot = false;
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Manual Control Timeout")
-	float ManualControlTimeout = 2.0f;
-	FTimerHandle AutopilotEnableTimer;
+	float DisableAutopilotTimeout = 0.1f;
+	FTimerHandle DisableAutopilotEnableTimer;
 
-	// Autopilot controls
+	// Autopilot state control
 	void DisableAutopilotTemporarily();
-	void EnableAutopilot();
+
+	// Roll controls
+	void DisableAggressiveTurnAngleTemporarily();
 
 	// Camera
 	void UpdateCameraLagTransition(float DeltaTime);
