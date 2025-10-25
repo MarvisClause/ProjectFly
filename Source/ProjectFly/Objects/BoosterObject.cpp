@@ -118,21 +118,31 @@ void ABoosterObject::ApplyBoosterEffect(AGliderPawn* Glider, float Influence, fl
 {
     if (!Glider) return;
 
-    // Affect plane via impulse and update it's speed
-    Glider->GetStaticMesh()->AddImpulse(StaticMesh->GetUpVector() * BoosterPushScalar * Influence);
+    UStaticMeshComponent* Mesh = Glider->GetStaticMesh();
+    if (!Mesh) return;
+
+    // Impulse and speed increase
+    Mesh->AddImpulse(StaticMesh->GetUpVector() * BoosterPushScalar * Influence);
     Glider->AffectSpeed(BoosterSpeedIncreaseValue * Influence);
 
-    // Rotate plane according to booster rotation
-    FRotator CurrentRot = Glider->GetStaticMesh()->GetComponentRotation();
-    FRotator TargetRot = bAlignToBooster
-        ? StaticMesh->GetUpVector().ToOrientationRotator()
-        : FRotator(Glider->GetStaticMesh()->GetComponentRotation().Pitch, CurrentRot.Yaw, Glider->GetStaticMesh()->GetComponentRotation().Roll);
+    // Orientation control
+    FVector CurrentDir = Mesh->GetForwardVector();
+    FVector TargetDir = bAlignToBooster ? StaticMesh->GetUpVector() : CurrentDir;
 
-    // Do not affect roll
-    TargetRot.Roll = 0.0f;
+    // Calculate angular difference between directions
+    float AngleError = FMath::RadiansToDegrees(acosf(FVector::DotProduct(CurrentDir, TargetDir)));
+    FVector RotationAxis = FVector::CrossProduct(CurrentDir, TargetDir).GetSafeNormal();
 
-    FRotator NewRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, BoosterRotationScalar * Influence);
-    Glider->GetStaticMesh()->SetWorldRotation(NewRot);
+    // Scale torque depending on how large the error is
+    float AlignmentStrength = FMath::Clamp(AngleError / 45.0f, 0.0f, 1.0f);
+
+    // Damping: reduce rotation if we're close to target
+    float TorqueStrength = BoosterRotationScalar * Influence * AlignmentStrength;
+
+    // Apply torque gradually to rotate towards target
+    FVector Torque = RotationAxis * TorqueStrength;
+
+    Mesh->AddTorqueInRadians(Torque, NAME_None, true);
 }
 
 void ABoosterObject::HandleActiveGliders(float DeltaTime)
