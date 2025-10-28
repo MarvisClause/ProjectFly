@@ -213,8 +213,33 @@ void AGliderPawn::CalculateSpeed(float DeltaTime)
 
 void AGliderPawn::OnGliderHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	// Decrease speed 
-	ForwardSpeed -= ForwardSpeed / 2;
+	const float ImpactStrength = NormalImpulse.Size();
+
+	float SpeedLoss = 0.0f;
+
+	// In case of smaller impact ignore
+	if (ImpactStrength < MinorImpactThreshold)
+	{
+		return;
+	}
+	// Apply minor impact
+	else if (ImpactStrength < MajorImpactThreshold)
+	{
+		SpeedLoss = ForwardSpeed * MinorImpactPercent;
+	}
+	// Apply big impact
+	else
+	{
+		SpeedLoss = ForwardSpeed * MajorImpactPercent;
+	}
+
+	// Calculate, if hit was a direct one or as scape one
+	FVector Forward = MeshComponent->GetForwardVector();
+	float HitAngleFactor = 1.0f - FMath::Abs(FVector::DotProduct(Forward, Hit.Normal));
+	SpeedLoss *= FMath::Lerp(0.2f, 1.0f, HitAngleFactor);
+
+	// Update speed
+	AffectSpeed(-SpeedLoss);
 }
 
 void AGliderPawn::AffectSpeed(float Speed)

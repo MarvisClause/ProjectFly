@@ -110,28 +110,28 @@ private:
 
 	bool bCanDash = true;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash", meta = (ClampMin = 0.0f))
 	float DashSpeedCost = 500.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash", meta = (ClampMin = 0.0f))
 	float DashStrength = 1600000.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash", meta = (ClampMin = 0.1f))
 	float DashCooldown = 3.0f;
 
 	// Halt Settings
 	FTimerHandle HaltTimer;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Halt")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Halt", meta = (ClampMin = 0.0f))
 	float HaltSpeedCost = 500.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Halt")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Halt", meta = (ClampMin = 0.1f))
 	float HaltDuration = 0.5f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Halt")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Halt", meta = (ClampMin = 0.1f))
 	float HaltCooldown = 3.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Halt")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Halt", meta = (ClampMin = 0.0f))
 	float HaltSpeedLinearDamping = 2.0f;
 
 	float LinearDampingBeforeHaltBackup = 0.0f;
@@ -141,16 +141,16 @@ private:
 
 	// Camera Settings
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
 	float NormalLagSpeed = 25.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
 	float MaxLagSpeed = 1000.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
 	float CameraLagTransitionSpeedToNormal = 2.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
 	float CameraLagTransitionSpeedToMax = 0.05f;
 
 	// Camera Lag Transition State
@@ -163,35 +163,46 @@ private:
 	ECameraLagTransitionState CameraLagState = ECameraLagTransitionState::None;
 
 	// Turbulence
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Turbulence")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Turbulence", meta = (ClampMin = 0.0f))
 	float TurbulenceScalar = 3.0f;
 
 	// Key responsiveness
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response", meta = (ClampMin = 0.0f))
 	float PitchMinKeyResponsivenessScalar = 10.0f;
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response", meta = (ClampMin = 0.0f))
 	float PitchMaxKeyResponsivenessScalar = 15.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response", meta = (ClampMin = 0.0f))
 	float YawMinKeyResponsivenessScalar = 5.0f;
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response", meta = (ClampMin = 0.0f))
 	float YawMaxKeyResponsivenessScalar = 10.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response", meta = (ClampMin = 0.0f))
 	float RollMinKeyResponsivenessScalar = 15.0f;
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Key Control Response", meta = (ClampMin = 0.0f))
 	float RollMaxKeyResponsivenessScalar = 20.0f;
 
 	// Timer for roll logic control
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Aggressive Turn Angle Disable Timeout")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Aggressive Turn Angle Disable Timeout", meta = (ClampMin = 0.1f))
 	float AggressiveTurnAngleDisableTimeout = 0.5f;
 	FTimerHandle EnableAggressiveTurnAngleTimer;
 
 	// Boolean variable, which controls autopilot pitch and roll
 	bool bDisableAutopilot = false;
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Manual Control Timeout")
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Manual Control Timeout", meta = (ClampMin = 0.1f))
 	float DisableAutopilotTimeout = 0.1f;
 	FTimerHandle DisableAutopilotEnableTimer;
+
+	// Impact threshold for configuring plane 
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Impact Control", meta = (ClampMin = 0.0f))
+	float MinorImpactThreshold = 300.0f;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Impact Control", meta = (ClampMin = 0.0f))
+	float MajorImpactThreshold = 1000.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Impact Control", meta = (ClampMin = 0.0f), meta = (ClampMax = 1.0f))
+	float MinorImpactPercent = 0.3f;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Impact Control", meta = (ClampMin = 0.0f), meta = (ClampMax = 1.0f))
+	float MajorImpactPercent = 0.8f;
 
 	// Autopilot state control
 	void DisableAutopilotTemporarily();
