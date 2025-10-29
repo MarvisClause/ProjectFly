@@ -72,6 +72,12 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Lift Control", meta = (ClampMin = 0.0f))
 	float MaxLiftForce = 5000.0f;
 
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Stall Control")
+	float StallPlaneSpeedThreshold = 30000.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Stall Control")
+	float StallRotationForce = 15.0f;
+
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Speed Control")
 	float MinimumPlaneSpeed = 0.0f;
 

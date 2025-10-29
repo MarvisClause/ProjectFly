@@ -136,7 +136,7 @@ void ABoosterObject::ApplyBoosterEffect(AGliderPawn* Glider, float Influence, fl
     // Scale torque depending on how large the error is
     float AlignmentStrength = FMath::Clamp(AngleError / 45.0f, 0.0f, 1.0f);
 
-    // Damping: reduce rotation if we're close to target
+    // Damping reduce rotation if we're close to target
     float TorqueStrength = BoosterRotationScalar * Influence * AlignmentStrength;
 
     // Apply torque gradually to rotate towards target

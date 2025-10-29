@@ -190,6 +190,32 @@ void AGliderPawn::Tick(float DeltaTime)
 
 		MeshComponent->AddTorqueInRadians(RandomTorque, NAME_None, true);
 	}
+
+	///////////////// Stall behavior ///////////////////
+	if (ForwardSpeed < StallPlaneSpeedThreshold)
+	{
+		// Orientation control
+		FVector CurrentDir = MeshComponent->GetForwardVector();
+		FVector TargetDir = -FVector::UpVector;
+
+		// Calculate angular difference between directions
+		float AngleError = FMath::RadiansToDegrees(acosf(FVector::DotProduct(CurrentDir, TargetDir)));
+		FVector RotationAxis = FVector::CrossProduct(CurrentDir, TargetDir).GetSafeNormal();
+
+		// Scale torque depending on how large the error is
+		float AlignmentStrength = FMath::Clamp(AngleError / 45.0f, 0.0f, 1.0f);
+
+		// Damping reduce rotation if we're close to target
+		float TorqueStrength = FMath::GetMappedRangeValueClamped(
+			FVector2D(StallPlaneSpeedThreshold, MinimumPlaneSpeed),
+			FVector2D(0, StallRotationForce),
+			ForwardSpeed	) * AlignmentStrength;
+
+		// Apply torque gradually to rotate towards target
+		FVector Torque = RotationAxis * TorqueStrength;
+
+		MeshComponent->AddTorqueInRadians(Torque, NAME_None, true);
+	}
 }
 
 void AGliderPawn::CalculateSpeed(float DeltaTime)
