@@ -126,6 +126,13 @@ void AGliderPawn::Tick(float DeltaTime)
 		MeshComponent->AddTorqueInRadians(MeshComponent->GetComponentRotation().RotateVector(Torque), NAME_None, true);
 	}
 
+	// Halt application
+	if (bHaltInputActive)
+	{
+		// Halt will cost plane forward speed
+		AffectSpeed(-HaltSpeedReduction);
+	}
+
 	///////////////// Physics calculation /////////////////
 	
 	float Speed = MeshComponent->GetComponentVelocity().Size();
@@ -159,37 +166,31 @@ void AGliderPawn::Tick(float DeltaTime)
 	FVector DragForce = -Velocity.GetSafeNormal() * Velocity.SizeSquared() * DragCoefficient;
 
 	FVector TotalForce = LiftForce + GravityForce + DragForce + (MeshComponent->GetForwardVector() * ForwardSpeed);
-	if (!bIsHalting)
-	{
-		MeshComponent->AddForce(TotalForce);
-	}
+	MeshComponent->AddForce(TotalForce);
 
 	///////////////// Simple Turbulence ///////////////////
 
-	if (!bIsHalting)
-	{
-		// Turbulence increases smoothly with forward speed
-		float TurbulenceStrength = FMath::GetMappedRangeValueClamped(
-			FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
-			FVector2D(0.0f, 1.0f),
-			ForwardSpeed
-		);
+	// Turbulence increases smoothly with forward speed
+	float TurbulenceStrength = FMath::GetMappedRangeValueClamped(
+		FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
+		FVector2D(0.0f, 1.0f),
+		ForwardSpeed
+	);
 
-		// Scale the torque magnitude
-		float TurbulenceTorque = TurbulenceScalar * TurbulenceStrength;
+	// Scale the torque magnitude
+	float TurbulenceTorque = TurbulenceScalar * TurbulenceStrength;
 
-		// Smooth Perlin noise over time
-		float Time = GetWorld()->GetTimeSeconds();
+	// Smooth Perlin noise over time
+	float Time = GetWorld()->GetTimeSeconds();
 
-		// Slightly different frequencies for each axis
-		float NoiseX = FMath::PerlinNoise1D(Time * 0.8f) * TurbulenceTorque;
-		float NoiseY = FMath::PerlinNoise1D(Time * 1.1f + 100.f) * TurbulenceTorque;
-		float NoiseZ = FMath::PerlinNoise1D(Time * 0.6f + 200.f) * TurbulenceTorque * 0.3f;
+	// Slightly different frequencies for each axis
+	float NoiseX = FMath::PerlinNoise1D(Time * 0.8f) * TurbulenceTorque;
+	float NoiseY = FMath::PerlinNoise1D(Time * 1.1f + 100.f) * TurbulenceTorque;
+	float NoiseZ = FMath::PerlinNoise1D(Time * 0.6f + 200.f) * TurbulenceTorque * 0.3f;
 
-		FVector RandomTorque = FVector(NoiseX, NoiseY, NoiseZ);
+	FVector RandomTorque = FVector(NoiseX, NoiseY, NoiseZ);
 
-		MeshComponent->AddTorqueInRadians(RandomTorque, NAME_None, true);
-	}
+	MeshComponent->AddTorqueInRadians(RandomTorque, NAME_None, true);
 
 	///////////////// Stall behavior ///////////////////
 	if (ForwardSpeed < StallPlaneSpeedThreshold)
@@ -300,7 +301,9 @@ void AGliderPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAxis("MoveRoll", this, &AGliderPawn::MoveRoll);
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AGliderPawn::StartDash);
+	
 	PlayerInputComponent->BindAction("Halt", IE_Pressed, this, &AGliderPawn::StartHalt);
+	PlayerInputComponent->BindAction("Halt", IE_Released, this, &AGliderPawn::StopHalt);
 }
 
 void AGliderPawn::Turn(float Value)
@@ -406,42 +409,20 @@ void AGliderPawn::ResetDashCooldown()
 
 void AGliderPawn::StartHalt()
 {
-	if (ForwardSpeed < MinimumPlaneSpeed + HaltSpeedCost)
-	{
-		return;
-	}
+	bHaltInputActive = true;
 
-	if (bCanHalt)
-	{
-		bCanHalt = false;
-		bIsHalting = true;
+	// Save linear damping and velocity before halt
+	LinearDampingBeforeHaltBackup = MeshComponent->GetLinearDamping();
 
-		// Halt will cost plane forward speed
-		AffectSpeed(-HaltSpeedCost);
-
-		// Save linear damping and velocity before halt
-		LinearDampingBeforeHaltBackup = MeshComponent->GetLinearDamping();
-
-		// Change linear damping to the one, which will be used in halt period
-		MeshComponent->SetLinearDamping(HaltSpeedLinearDamping);
-
-		GetWorld()->GetTimerManager().SetTimer(HaltTimer, this, &AGliderPawn::StopHalt, HaltDuration, false);
-	}
+	// Change linear damping to the one, which will be used in halt period
+	MeshComponent->SetLinearDamping(HaltSpeedLinearDamping);
 }
 
 void AGliderPawn::StopHalt()
 {
-	bIsHalting = false;
+	bHaltInputActive = false;
 
 	MeshComponent->SetLinearDamping(LinearDampingBeforeHaltBackup);
-
-	// Start cooldown
-	GetWorld()->GetTimerManager().SetTimer(HaltTimer, this, &AGliderPawn::ResetHaltCooldown, HaltCooldown, false);
-}
-
-void AGliderPawn::ResetHaltCooldown()
-{
-	bCanHalt = true;
 }
 
 void AGliderPawn::LookUp(float Value)

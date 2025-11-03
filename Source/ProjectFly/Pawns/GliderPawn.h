@@ -126,24 +126,15 @@ private:
 	float DashCooldown = 3.0f;
 
 	// Halt Settings
-	FTimerHandle HaltTimer;
+	bool bHaltInputActive = false;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Halt", meta = (ClampMin = 0.0f))
-	float HaltSpeedCost = 500.0f;
-
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Halt", meta = (ClampMin = 0.1f))
-	float HaltDuration = 0.5f;
-
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Halt", meta = (ClampMin = 0.1f))
-	float HaltCooldown = 3.0f;
+	float HaltSpeedReduction = 500.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Halt", meta = (ClampMin = 0.0f))
-	float HaltSpeedLinearDamping = 2.0f;
+	float HaltSpeedLinearDamping = 4.0f;
 
 	float LinearDampingBeforeHaltBackup = 0.0f;
-
-	bool bCanHalt = true;
-	bool bIsHalting = false;
 
 	// Camera Settings
 
@@ -226,7 +217,6 @@ private:
 	// Halt
 	void StartHalt();
 	void StopHalt();
-	void ResetHaltCooldown();
 
 	// Mouse input handlers
 	void LookUp(float Value);
