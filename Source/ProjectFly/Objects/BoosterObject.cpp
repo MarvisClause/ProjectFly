@@ -125,6 +125,9 @@ void ABoosterObject::ApplyBoosterEffect(AGliderPawn* Glider, float Influence, fl
     Mesh->AddImpulse(StaticMesh->GetUpVector() * BoosterPushScalar * Influence);
     Glider->AffectSpeed(BoosterSpeedIncreaseValue * Influence);
 
+    // Stamina increase
+    Glider->AffectDashStamina(BoosterDashStaminaIncreaseValue * Influence);
+
     // Orientation control
     FVector CurrentDir = Mesh->GetForwardVector();
     FVector TargetDir = bAlignToBooster ? StaticMesh->GetUpVector() : CurrentDir;

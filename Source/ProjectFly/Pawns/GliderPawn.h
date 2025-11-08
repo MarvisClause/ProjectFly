@@ -23,6 +23,8 @@ public:
 
 	void AffectSpeed(float Speed);
 
+	void AffectDashStamina(float Stamina);
+
 	void StartRemovingCameraLag();
 	void StartEnablingCameraLag();
 

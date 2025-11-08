@@ -45,6 +45,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Booster")
 	bool bIncrementalExitBoosterPush = true;
 
+	// Booster stamina increase value
+	// Increases dash stamina of the plane
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Booster", meta = (ClampMin = 0.0f))
+	float BoosterDashStaminaIncreaseValue = 1.0f;
+
 	// Booster speed increase value
 	// Increases speed of the plane
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Booster", meta = (ClampMin = 0.0f))

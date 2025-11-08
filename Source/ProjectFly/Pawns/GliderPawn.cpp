@@ -296,6 +296,11 @@ void AGliderPawn::AffectSpeed(float Speed)
 	ForwardSpeed = FMath::Clamp(ForwardSpeed + Speed, MinimumPlaneSpeed, MaximumPlaneSpeed);
 }
 
+void AGliderPawn::AffectDashStamina(float Stamina)
+{
+	CurrentDashStamina = FMath::Clamp(CurrentDashStamina + Stamina, 0.0f, MaximumDashStamina);
+}
+
 void AGliderPawn::StartRemovingCameraLag()
 {
 	CameraLagState = ECameraLagTransitionState::Increasing;
