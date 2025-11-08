@@ -192,6 +192,16 @@ void AGliderPawn::Tick(float DeltaTime)
 
 	MeshComponent->AddTorqueInRadians(RandomTorque, NAME_None, true);
 
+	///////////////// Dash behavior ///////////////////
+	if (bIsChargingDash && CurrentDashStamina > 0.0f)
+	{
+		DashChargePercent += (DashStaminaConsumptionRate / MaximumDashStamina) * DeltaTime;
+		DashChargePercent = FMath::Clamp(DashChargePercent, 0.0f, 1.0f);
+
+		CurrentDashStamina -= DashStaminaConsumptionRate * DeltaTime;
+		CurrentDashStamina = FMath::Max(CurrentDashStamina, 0.0f);
+	}
+
 	///////////////// Stall behavior ///////////////////
 	if (ForwardSpeed < StallPlaneSpeedThreshold)
 	{
@@ -229,6 +239,18 @@ void AGliderPawn::CalculateSpeed(float DeltaTime)
 		float DiveFactor = FMath::Clamp(-Inclination, 0.f, 1.f);
 		float DiveAcceleration = FMath::Pow(DiveFactor, 1.8f) * (DiveSpeedIncreaseScalar * 1.8f);
 		AffectSpeed(DiveAcceleration * DeltaTime);
+
+		// Only recharge when diving
+		if (!bIsChargingDash)
+		{
+			if (Inclination < 0.0f)
+			{
+				float RechargeAmount = DashStaminaRechargeRate * DiveFactor * DeltaTime;
+
+				CurrentDashStamina += RechargeAmount;
+				CurrentDashStamina = FMath::Min(CurrentDashStamina, MaximumDashStamina);
+			}
+		}
 	}
 	else
 	{
@@ -301,6 +323,7 @@ void AGliderPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAxis("MoveRoll", this, &AGliderPawn::MoveRoll);
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AGliderPawn::StartDash);
+	PlayerInputComponent->BindAction("Dash", IE_Released, this, &AGliderPawn::ReleaseDash);
 	
 	PlayerInputComponent->BindAction("Halt", IE_Pressed, this, &AGliderPawn::StartHalt);
 	PlayerInputComponent->BindAction("Halt", IE_Released, this, &AGliderPawn::StopHalt);
@@ -382,29 +405,52 @@ void AGliderPawn::MoveRoll(float Value)
 
 void AGliderPawn::StartDash()
 {
-	if (ForwardSpeed < MinimumPlaneSpeed + DashSpeedCost)
-	{
+	if (CurrentDashStamina < MinimumStaminaForDash)
 		return;
-	}
 
-	if (bCanDash)
-	{
-		bCanDash = false;
+	// Charge dash to the minimum amount instantly
+	DashChargePercent = MinimumStaminaForDash / MaximumDashStamina;
+	CurrentDashStamina = FMath::Clamp(CurrentDashStamina - MinimumStaminaForDash, 0.0f, MaximumDashStamina);
 
-		// Add impulse, which will imitate dash
-		MeshComponent->AddForce(MeshComponent->GetForwardVector() * DashStrength, NAME_None, false);
-
-		// Dash will cost plane forward speed
-		AffectSpeed(-DashSpeedCost);
-
-		// Start cooldown
-		GetWorld()->GetTimerManager().SetTimer(DashCooldownTimer, this, &AGliderPawn::ResetDashCooldown, DashCooldown, false);
-	}
+	bIsChargingDash = true;
 }
 
-void AGliderPawn::ResetDashCooldown()
+void AGliderPawn::ReleaseDash()
 {
-	bCanDash = true;
+	if (!bIsChargingDash)
+		return;
+
+	bIsChargingDash = false;
+
+	// Map dash duration to dash charge
+	float DashDuration = FMath::Lerp(DashMinDuration, DashMaxDuration, DashChargePercent);
+
+	// Map charge to impulse strength
+	float DashStrengthApplied = FMath::Lerp(0.0, DashMaximumStrength, DashChargePercent);
+
+	// Apply impulse
+	DashForceRemaining = DashStrengthApplied;
+	DashForcePerTick = DashStrengthApplied / (DashDuration / GetWorld()->GetDeltaSeconds());
+
+	GetWorld()->GetTimerManager().SetTimer(DashForceTimer, [this]()
+		{
+			if (DashForceRemaining <= 0.f)
+			{
+				GetWorld()->GetTimerManager().ClearTimer(DashForceTimer);
+				return;
+			}
+
+			MeshComponent->AddForce(MeshComponent->GetForwardVector() * DashForceRemaining);
+			DashForceRemaining -= DashForcePerTick;
+
+		}, GetWorld()->GetDeltaSeconds(), true);
+
+	// Increase forward speed
+	float DashSpeedBoost = FMath::Lerp(0.0f, DashMaximumForwardBoost, DashChargePercent);
+	AffectSpeed(DashSpeedBoost);
+
+	// Reset charge
+	DashChargePercent = 0.0f;
 }
 
 void AGliderPawn::StartHalt()

@@ -110,20 +110,43 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	float ForwardSpeed = 0.0f;
 
-	// Dash Settings
-	FTimerHandle DashStopTimer;
-	FTimerHandle DashCooldownTimer;
+	// Dash/Charge
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Glider Control - Dash", meta = (AllowPrivateAccess = "true"))
+	float CurrentDashStamina = 100.0f;
 
-	bool bCanDash = true;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
+	float MaximumDashStamina = 100.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash", meta = (ClampMin = 0.0f))
-	float DashSpeedCost = 500.0f;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
+	float MinimumStaminaForDash = 30.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash", meta = (ClampMin = 0.0f))
-	float DashStrength = 1600000.0f;
+	// Comsumption rate per second while charging
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
+	float DashStaminaConsumptionRate = 30.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash", meta = (ClampMin = 0.1f))
-	float DashCooldown = 3.0f;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
+	float DashMaximumStrength = 800000.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
+	float DashMaximumForwardBoost = 30000.f;
+
+	FTimerHandle DashForceTimer;
+	float DashForceRemaining = 0.0f;
+	float DashForcePerTick = 0.0f;
+
+	// Recharges units per second
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
+	float DashStaminaRechargeRate = 1.0f;
+
+	// Dash duration scaling
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
+	float DashMinDuration = 0.5f;
+
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Dash")
+	float DashMaxDuration = 1.5f;
+
+	bool bIsChargingDash = false;
+	float DashChargePercent = 0.0f;
 
 	// Halt Settings
 	bool bHaltInputActive = false;
@@ -212,7 +235,7 @@ private:
 
 	// Dash
 	void StartDash();
-	void ResetDashCooldown();
+	void ReleaseDash();
 
 	// Halt
 	void StartHalt();
