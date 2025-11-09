@@ -241,7 +241,7 @@ void AGliderPawn::CalculateSpeed(float DeltaTime)
 		AffectSpeed(DiveAcceleration * DeltaTime);
 
 		// Only recharge when diving
-		if (!bIsChargingDash)
+		if (!bIsChargingDash && !bHaltInputActive)
 		{
 			if (Inclination < 0.0f)
 			{
