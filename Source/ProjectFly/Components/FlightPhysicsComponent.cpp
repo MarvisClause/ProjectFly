@@ -298,7 +298,7 @@ void UFlightPhysicsComponent::RunTurbulence()
 	// Turbulence increases smoothly with forward speed
 	float TurbulenceStrength = FMath::GetMappedRangeValueClamped(
 		FVector2D(MinimumSpeed, MaximumSpeed),
-		FVector2D(0.0f, 1.0f),
+		FVector2D(MinimalTurbulence, 1.0f),
 		ForwardSpeed
 	);
 

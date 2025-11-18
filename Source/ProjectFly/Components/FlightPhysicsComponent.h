@@ -206,6 +206,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Flight Physics - Turbulence", meta = (ClampMin = 0.0f))
 	float TurbulenceScalar = 3.0f;
 
+	UPROPERTY(EditAnywhere, Category = "Flight Physics - Turbulence", meta = (ClampMin = 0.0f), meta = (ClampMax = 1.0f))
+	float MinimalTurbulence = 0.0f;
+
 	// Frequency multipliers for each axis (affects speed of Perlin noise change)
 	UPROPERTY(EditAnywhere, Category = "Flight Physics - Turbulence", meta = (ClampMin = 0.0f))
 	float TurbulenceFrequencyX = 0.8f;
