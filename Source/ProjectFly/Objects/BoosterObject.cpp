@@ -1,6 +1,7 @@
 #include "BoosterObject.h"
 #include "Components/BoxComponent.h"
 #include "ProjectFly/Pawns/GliderPawn.h"
+#include "ProjectFly/Components/FlightPhysicsComponent.h"
 
 // Sets default values
 ABoosterObject::ABoosterObject()
@@ -123,7 +124,7 @@ void ABoosterObject::ApplyBoosterEffect(AGliderPawn* Glider, float Influence, fl
 
     // Impulse and speed increase
     Mesh->AddImpulse(StaticMesh->GetUpVector() * BoosterPushScalar * Influence);
-    Glider->AffectSpeed(BoosterSpeedIncreaseValue * Influence);
+    Glider->AccessFlightPhysicsComponent()->AffectSpeed(BoosterSpeedIncreaseValue * Influence);
 
     // Stamina increase
     Glider->AffectDashStamina(BoosterDashStaminaIncreaseValue * Influence);

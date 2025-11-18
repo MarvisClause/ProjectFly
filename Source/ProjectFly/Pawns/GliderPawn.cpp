@@ -1,7 +1,8 @@
 ﻿#include "ProjectFly/Pawns/GliderPawn.h"
+#include "ProjectFly/Components/FlightPhysicsComponent.h"
 #include "Camera/CameraComponent.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/PlayerController.h"
 
 AGliderPawn::AGliderPawn()
@@ -10,12 +11,6 @@ AGliderPawn::AGliderPawn()
 
 	// Replace Capsule with Static Mesh
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
-	MeshComponent->SetSimulatePhysics(true);
-	MeshComponent->SetEnableGravity(false);
-	// Slight drag, prevents overspeed
-	MeshComponent->SetLinearDamping(0.7f);
-	// Dampen rotation for stability
-	MeshComponent->SetAngularDamping(5.0f);
 	MeshComponent->SetNotifyRigidBodyCollision(true);
 	RootComponent = MeshComponent;
 
@@ -38,12 +33,15 @@ AGliderPawn::AGliderPawn()
 
 	// Update tick groups for actor to handle issue with camera jittering, when camera lag in spring arm is enabled
 	PrimaryActorTick.bStartWithTickEnabled = true;
-	PrimaryActorTick.TickGroup = TG_PrePhysics;
-	MeshComponent->SetTickGroup(TG_PrePhysics);
+	PrimaryActorTick.TickGroup = TG_DuringPhysics;
+	MeshComponent->SetTickGroup(TG_DuringPhysics);
 
 	// Make spring arm tick after physics has settled
 	SpringArm->PrimaryComponentTick.TickGroup = TG_PostPhysics;
 	Camera->PrimaryComponentTick.TickGroup = TG_PostPhysics;
+
+	// Flight physics component
+	FlightPhysicsComponent = CreateDefaultSubobject<UFlightPhysicsComponent>(TEXT("FlightPhysics"));
 }
 
 void AGliderPawn::OnConstruction(const FTransform& Transform)
@@ -56,27 +54,6 @@ void AGliderPawn::OnConstruction(const FTransform& Transform)
 	}
 }
 
-FVector AGliderPawn::GetTargetAimWorldLocation() const
-{
-	// Could be calculated from mouse hit on world plane
-	return DesiredDirection;
-}
-
-FVector AGliderPawn::GetCurrentDirection() const
-{
-	return MeshComponent->GetForwardVector();
-}
-
-FRotator AGliderPawn::GetCurrentRotation() const
-{
-	return MeshComponent->GetComponentRotation();
-}
-
-void AGliderPawn::SetDesiredDirection(FVector WorldDirection)
-{
-	DesiredDirection = WorldDirection;
-}
-
 void AGliderPawn::BeginPlay()
 {
 	Super::BeginPlay();
@@ -84,115 +61,31 @@ void AGliderPawn::BeginPlay()
 	// Update camera lag speed
 	StartEnablingCameraLag();
 
-	// Add initial speed
-	AffectSpeed(StartPlaneSpeed);
-
-	// Bind the OnComponentHit event
-	MeshComponent->OnComponentHit.AddDynamic(this, &AGliderPawn::OnGliderHit);
+	// Subscribe to event
+	FlightPhysicsComponent->OnDiveTick.AddDynamic(this, &AGliderPawn::OnDiveTickHandler );
 }
 
 void AGliderPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	///////////////// Camera's spring arm length calculation for better view when plane turns /////////////////
-
-	// Calculate camera lag
-	UpdateCameraLagTransition(DeltaTime);
-
-	///////////////// Speed and direction calculation /////////////////
-
-	CalculateSpeed(DeltaTime);
-
-	// Camera/Target update
+	///////////////////////// Camera/Target update
 	CameraPitch = FMath::Clamp(CameraPitch, -90.f, 90.f);
 	FRotator NewRotation(CameraPitch, CameraYaw, 0.0f);
 	SpringArm->SetWorldRotation(NewRotation);
+	FlightPhysicsComponent->SetTargetAutopilotPosition(MeshComponent->GetComponentLocation() + Camera->GetForwardVector() * 1000.0f);
 
-	if (!bDisableAutopilot)
-	{
-		// Autopilot calculation
-		const FVector FlyTarget = MeshComponent->GetComponentLocation() + Camera->GetForwardVector() * 1000.0f;
-		DesiredDirection = FlyTarget;
+	///////////////////////// Calculate camera lag
+	UpdateCameraLagTransition(DeltaTime);
 
-		float YawInput, PitchInput, RollInput;
-		RunAutopilot(FlyTarget, YawInput, PitchInput, RollInput);
-
-		FVector Torque = FVector(
-			RollInput * TurnTorque.X,
-			PitchInput * TurnTorque.Y,
-			YawInput * TurnTorque.Z
-		);
-		MeshComponent->AddTorqueInRadians(MeshComponent->GetComponentRotation().RotateVector(Torque), NAME_None, true);
-	}
-
-	// Halt application
+	///////////////////////// Halt application
 	if (bHaltInputActive)
 	{
 		// Halt will cost plane forward speed
-		AffectSpeed(-HaltSpeedReduction);
+		FlightPhysicsComponent->AffectSpeed(-HaltSpeedReduction);
 	}
 
-	///////////////// Physics calculation /////////////////
-	
-	float Speed = MeshComponent->GetComponentVelocity().Size();
-	float AoA = MeshComponent->GetForwardVector().Z;
-
-	// Lift drops hard below stall speed
-	float StallSpeed = MinimumPlaneSpeed * 1.2f;
-	float LiftFactor = FMath::Clamp((Speed - StallSpeed) / StallSpeed, 0.f, 1.f);
-	LiftFactor *= (1.f - FMath::Abs(AoA) * 0.7f);
-
-	float LiftForceMag = Speed * Speed * LiftFactor * LiftCoefficientScalar;
-	LiftForceMag = FMath::Min(LiftForceMag, MaxLiftForce);
-	FVector LiftForce = FVector::UpVector * LiftForceMag;
-
-	// Gravity gets strong quickly when slow
-	float GravityBoost = FMath::GetMappedRangeValueClamped(
-		FVector2D(MinimumPlaneSpeed, StallSpeed),
-		FVector2D(1.0f, 3.5f), // up from 2.5f
-		Speed
-	);
-
-	FVector GravityForce = FVector::DownVector * GravityScalar * GravityMultiplier * GravityBoost;
-
-	// Drag: very strong when slow & high AoA
-	float BaseDragCoef = 0.002f;
-	float AoADragBoost = 1.f + FMath::Abs(AoA) * 3.f;
-	float SpeedDragBoost = (Speed < StallSpeed) ? (2.0f - Speed / StallSpeed) : 1.f;
-	float DragCoefficient = BaseDragCoef * AoADragBoost * SpeedDragBoost;
-
-	FVector Velocity = MeshComponent->GetComponentVelocity();
-	FVector DragForce = -Velocity.GetSafeNormal() * Velocity.SizeSquared() * DragCoefficient;
-
-	FVector TotalForce = LiftForce + GravityForce + DragForce + (MeshComponent->GetForwardVector() * ForwardSpeed);
-	MeshComponent->AddForce(TotalForce);
-
-	///////////////// Simple Turbulence ///////////////////
-
-	// Turbulence increases smoothly with forward speed
-	float TurbulenceStrength = FMath::GetMappedRangeValueClamped(
-		FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
-		FVector2D(0.0f, 1.0f),
-		ForwardSpeed
-	);
-
-	// Scale the torque magnitude
-	float TurbulenceTorque = TurbulenceScalar * TurbulenceStrength;
-
-	// Smooth Perlin noise over time
-	float Time = GetWorld()->GetTimeSeconds();
-
-	// Slightly different frequencies for each axis
-	float NoiseX = FMath::PerlinNoise1D(Time * 0.8f) * TurbulenceTorque;
-	float NoiseY = FMath::PerlinNoise1D(Time * 1.1f + 100.f) * TurbulenceTorque;
-	float NoiseZ = FMath::PerlinNoise1D(Time * 0.6f + 200.f) * TurbulenceTorque * 0.3f;
-
-	FVector RandomTorque = FVector(NoiseX, NoiseY, NoiseZ);
-
-	MeshComponent->AddTorqueInRadians(RandomTorque, NAME_None, true);
-
-	///////////////// Dash behavior ///////////////////
+	///////////////////////// Dash behavior 
 	if (bIsChargingDash && CurrentDashStamina > 0.0f)
 	{
 		DashChargePercent += (DashStaminaConsumptionRate / MaximumDashStamina) * DeltaTime;
@@ -201,99 +94,10 @@ void AGliderPawn::Tick(float DeltaTime)
 		CurrentDashStamina -= DashStaminaConsumptionRate * DeltaTime;
 		CurrentDashStamina = FMath::Max(CurrentDashStamina, 0.0f);
 	}
-
-	///////////////// Stall behavior ///////////////////
-	if (ForwardSpeed < StallPlaneSpeedThreshold)
+	else if (bIsChargingDash && CurrentDashStamina <= 0)
 	{
-		// Orientation control
-		FVector CurrentDir = MeshComponent->GetForwardVector();
-		FVector TargetDir = -FVector::UpVector;
-
-		// Calculate angular difference between directions
-		float AngleError = FMath::RadiansToDegrees(acosf(FVector::DotProduct(CurrentDir, TargetDir)));
-		FVector RotationAxis = FVector::CrossProduct(CurrentDir, TargetDir).GetSafeNormal();
-
-		// Scale torque depending on how large the error is
-		float AlignmentStrength = FMath::Clamp(AngleError / 45.0f, 0.0f, 1.0f);
-
-		// Damping reduce rotation if we're close to target
-		float TorqueStrength = FMath::GetMappedRangeValueClamped(
-			FVector2D(StallPlaneSpeedThreshold, MinimumPlaneSpeed),
-			FVector2D(0, StallRotationForce),
-			ForwardSpeed	) * AlignmentStrength;
-
-		// Apply torque gradually to rotate towards target
-		FVector Torque = RotationAxis * TorqueStrength;
-
-		MeshComponent->AddTorqueInRadians(Torque, NAME_None, true);
+		ReleaseDash();
 	}
-}
-
-void AGliderPawn::CalculateSpeed(float DeltaTime)
-{
-	float Inclination = MeshComponent->GetForwardVector().Z;
-
-	if (Inclination < 0)
-	{
-		// Dive acceleration
-		float DiveFactor = FMath::Clamp(-Inclination, 0.f, 1.f);
-		float DiveAcceleration = FMath::Pow(DiveFactor, 1.8f) * (DiveSpeedIncreaseScalar * 1.8f);
-		AffectSpeed(DiveAcceleration * DeltaTime);
-
-		// Only recharge when diving
-		if (!bIsChargingDash && !bHaltInputActive)
-		{
-			if (Inclination < 0.0f)
-			{
-				float RechargeAmount = DashStaminaRechargeRate * DiveFactor * DeltaTime;
-
-				CurrentDashStamina += RechargeAmount;
-				CurrentDashStamina = FMath::Min(CurrentDashStamina, MaximumDashStamina);
-			}
-		}
-	}
-	else
-	{
-		// Climb penalty
-		float RisePenalty = FMath::Pow(Inclination, 1.5f) * (RiseSpeedDecreaseScalar * 1.2f);
-		AffectSpeed(-RisePenalty * DeltaTime);
-	}
-}
-
-void AGliderPawn::OnGliderHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
-{
-	const float ImpactStrength = NormalImpulse.Size();
-
-	float SpeedLoss = 0.0f;
-
-	// In case of smaller impact ignore
-	if (ImpactStrength < MinorImpactThreshold)
-	{
-		return;
-	}
-	// Apply minor impact
-	else if (ImpactStrength < MajorImpactThreshold)
-	{
-		SpeedLoss = ForwardSpeed * MinorImpactPercent;
-	}
-	// Apply big impact
-	else
-	{
-		SpeedLoss = ForwardSpeed * MajorImpactPercent;
-	}
-
-	// Calculate, if hit was a direct one or as scape one
-	FVector Forward = MeshComponent->GetForwardVector();
-	float HitAngleFactor = 1.0f - FMath::Abs(FVector::DotProduct(Forward, Hit.Normal));
-	SpeedLoss *= FMath::Lerp(0.2f, 1.0f, HitAngleFactor);
-
-	// Update speed
-	AffectSpeed(-SpeedLoss);
-}
-
-void AGliderPawn::AffectSpeed(float Speed)
-{
-	ForwardSpeed = FMath::Clamp(ForwardSpeed + Speed, MinimumPlaneSpeed, MaximumPlaneSpeed);
 }
 
 void AGliderPawn::AffectDashStamina(float Stamina)
@@ -314,6 +118,11 @@ void AGliderPawn::StartEnablingCameraLag()
 UStaticMeshComponent* AGliderPawn::GetStaticMesh() const
 {
 	return MeshComponent;
+}
+
+UFlightPhysicsComponent* AGliderPawn::AccessFlightPhysicsComponent()
+{
+	return FlightPhysicsComponent;
 }
 
 void AGliderPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -348,18 +157,7 @@ void AGliderPawn::MovePitch(float Value)
 
 	DisableAutopilotTemporarily();
 
-	float Responsiveness = FMath::GetMappedRangeValueClamped(
-		FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
-		FVector2D(PitchMinKeyResponsivenessScalar, PitchMaxKeyResponsivenessScalar),
-		ForwardSpeed
-	);
-
-	FVector Torque = FVector(
-		0.0f,
-		Value * Responsiveness,
-		0.0f
-	);
-	MeshComponent->AddTorqueInRadians(MeshComponent->GetComponentRotation().RotateVector(Torque), NAME_None, true);
+	FlightPhysicsComponent->MovePitch(Value);
 }
 
 void AGliderPawn::MoveYaw(float Value)
@@ -371,18 +169,7 @@ void AGliderPawn::MoveYaw(float Value)
 
 	DisableAutopilotTemporarily();
 
-	float Responsiveness = FMath::GetMappedRangeValueClamped(
-		FVector2D(MinimumAirControl, MaximumAirControl),
-		FVector2D(YawMinKeyResponsivenessScalar, YawMaxKeyResponsivenessScalar),
-		ForwardSpeed
-	);
-
-	FVector Torque = FVector(
-		0.0f,
-		0.0f,
-		Value * Responsiveness
-	);
-	MeshComponent->AddTorqueInRadians(MeshComponent->GetComponentRotation().RotateVector(Torque), NAME_None, true);
+	FlightPhysicsComponent->MoveYaw(Value);
 }
 
 void AGliderPawn::MoveRoll(float Value)
@@ -394,18 +181,12 @@ void AGliderPawn::MoveRoll(float Value)
 
 	DisableAggressiveTurnAngleTemporarily();
 
-	float Responsiveness = FMath::GetMappedRangeValueClamped(
-		FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
-		FVector2D(RollMinKeyResponsivenessScalar, RollMaxKeyResponsivenessScalar),
-		ForwardSpeed
-	);
+	FlightPhysicsComponent->MoveRoll(Value);
+}
 
-	FVector Torque = FVector(
-		Value * Responsiveness,
-		0.0f,
-		0.0f
-	);
-	MeshComponent->AddTorqueInRadians(MeshComponent->GetComponentRotation().RotateVector(Torque), NAME_None, true);
+void AGliderPawn::OnDiveTickHandler(float DiveFactor)
+{
+	ChargeDashTick(DiveFactor);
 }
 
 void AGliderPawn::StartDash()
@@ -452,10 +233,22 @@ void AGliderPawn::ReleaseDash()
 
 	// Increase forward speed
 	float DashSpeedBoost = FMath::Lerp(0.0f, DashMaximumForwardBoost, DashChargePercent);
-	AffectSpeed(DashSpeedBoost);
+	FlightPhysicsComponent->AffectSpeed(DashSpeedBoost);
 
 	// Reset charge
 	DashChargePercent = 0.0f;
+}
+
+void AGliderPawn::ChargeDashTick(float DiveFactor)
+{
+	// Only recharge when diving and halt is not activated
+	if (!bIsChargingDash && !bHaltInputActive)
+	{
+		float RechargeAmount = DashStaminaRechargeRate * DiveFactor * GetWorld()->DeltaTimeSeconds;
+
+		CurrentDashStamina += RechargeAmount;
+		CurrentDashStamina = FMath::Min(CurrentDashStamina, MaximumDashStamina);
+	}
 }
 
 void AGliderPawn::StartHalt()
@@ -463,17 +256,18 @@ void AGliderPawn::StartHalt()
 	bHaltInputActive = true;
 
 	// Save linear damping and velocity before halt
-	LinearDampingBeforeHaltBackup = MeshComponent->GetLinearDamping();
+	LinearDampingBeforeHaltBackup = FlightPhysicsComponent->GetStaticMeshComponentLinearDampingOverride();
 
 	// Change linear damping to the one, which will be used in halt period
-	MeshComponent->SetLinearDamping(HaltSpeedLinearDamping);
+	FlightPhysicsComponent->SetStaticMeshComponentLinearDampingOverride(HaltSpeedLinearDamping);
 }
 
 void AGliderPawn::StopHalt()
 {
 	bHaltInputActive = false;
 
-	MeshComponent->SetLinearDamping(LinearDampingBeforeHaltBackup);
+	// Return original linear damping value
+	FlightPhysicsComponent->SetStaticMeshComponentLinearDampingOverride(LinearDampingBeforeHaltBackup);
 }
 
 void AGliderPawn::LookUp(float Value)
@@ -481,49 +275,16 @@ void AGliderPawn::LookUp(float Value)
 	CameraPitch += Value * MouseSensitivity;
 }
 
-void AGliderPawn::RunAutopilot(const FVector& FlyTarget, float& OutYaw, float& OutPitch, float& OutRoll)
-{
-	const FTransform& ActorTransform = GetActorTransform();
-	FVector LocalFlyTarget = ActorTransform.InverseTransformPosition(FlyTarget).GetSafeNormal() * TurnAngleSensitivity;
-
-	// Pitch (Z), Yaw (Y), Roll (X)
-	// Base autopilot control signals (full responsiveness)
-	float BasePitch = -FMath::Clamp(LocalFlyTarget.Z, -1.0f, 1.0f);
-	float BaseYaw = FMath::Clamp(LocalFlyTarget.Y, -1.0f, 1.0f);
-
-	float AggressiveRoll = FMath::Clamp(LocalFlyTarget.Y, -1.0f, 1.0f);
-	float WingsLevelRoll = GetActorRightVector().Z;
-
-	FVector ToTarget = (FlyTarget - GetActorLocation()).GetSafeNormal();
-	float AngleOffTarget = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(GetActorForwardVector(), ToTarget)));
-
-	float BlendFactor = FMath::Clamp(AngleOffTarget / AggressiveTurnAngle, 0.0f, 1.0f);
-	float BaseRoll = -FMath::Lerp(WingsLevelRoll, AggressiveRoll, BlendFactor);
-
-	// Calculate responsiveness factor [0..1] based on ForwardSpeed
-	// Normalize AirControl between MinimumAirControl and MaximumAirControl to [0..1]
-	float Responsiveness = FMath::GetMappedRangeValueClamped(
-		FVector2D(MinimumPlaneSpeed, MaximumPlaneSpeed),
-		FVector2D(MinimumAirControl, MaximumAirControl),
-		ForwardSpeed
-	);
-
-	// Normal autopilot control with responsiveness scaling
-	OutPitch = BasePitch * Responsiveness;
-	OutYaw = BaseYaw * Responsiveness;
-	OutRoll = BaseRoll * Responsiveness;
-}
-
 void AGliderPawn::DisableAutopilotTemporarily()
 {
-	bDisableAutopilot = true;
+	FlightPhysicsComponent->SetAutopilotState(false);
 
 	GetWorld()->GetTimerManager().ClearTimer(DisableAutopilotEnableTimer);
 	GetWorldTimerManager().SetTimer(
 		DisableAutopilotEnableTimer,
 		[this]()
 		{
-			bDisableAutopilot = false;
+			FlightPhysicsComponent->SetAutopilotState(true);
 		},
 		DisableAutopilotTimeout,
 		false
@@ -537,8 +298,8 @@ void AGliderPawn::DisableAggressiveTurnAngleTemporarily()
 		return;
 	}
 	
-	float OldAggressiveTurnValue = AggressiveTurnAngle;
-	AggressiveTurnAngle = 0.0f;
+	float OldAggressiveTurnValue = FlightPhysicsComponent->GetAutopilotAggressiveTurnAngle();
+	FlightPhysicsComponent->SetAutopilotAggressiveTurnAngle(0.0f);
 
 	// Reset the timer each time we detect input
 	GetWorld()->GetTimerManager().ClearTimer(EnableAggressiveTurnAngleTimer);
@@ -546,7 +307,7 @@ void AGliderPawn::DisableAggressiveTurnAngleTemporarily()
 		EnableAggressiveTurnAngleTimer,
 		[this, OldAggressiveTurnValue]()
 		{
-			AggressiveTurnAngle = OldAggressiveTurnValue;
+			FlightPhysicsComponent->SetAutopilotAggressiveTurnAngle(OldAggressiveTurnValue);
 		},
 		AggressiveTurnAngleDisableTimeout,
 		false
