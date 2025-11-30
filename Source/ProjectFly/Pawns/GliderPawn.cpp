@@ -1,5 +1,7 @@
 ﻿#include "ProjectFly/Pawns/GliderPawn.h"
+#include "ProjectFly/Pawns/DeathPawn.h"
 #include "ProjectFly/Components/FlightPhysicsComponent.h"
+#include "ProjectFly/Components/HealthComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -9,14 +11,22 @@ AGliderPawn::AGliderPawn()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	// Replace Capsule with Static Mesh
+	// Main scene component
+	RootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootSceneComponent"));
+	RootComponent = RootSceneComponent;
+
+	// Mesh component, main moving element of glider pawn
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
+	MeshComponent->SetupAttachment(RootComponent);
 	MeshComponent->SetNotifyRigidBodyCollision(true);
-	RootComponent = MeshComponent;
+
+	// Camera focus scene component
+	CameraFocusSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("CameraFocusSceneComponent"));
+	CameraFocusSceneComponent->SetupAttachment(MeshComponent);
 
 	// Spring Arm for camera orbit
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-	SpringArm->SetupAttachment(RootComponent);
+	SpringArm->SetupAttachment(CameraFocusSceneComponent);
 	SpringArm->TargetArmLength = 450.f;
 	SpringArm->bUsePawnControlRotation = false;
 
@@ -42,6 +52,9 @@ AGliderPawn::AGliderPawn()
 
 	// Flight physics component
 	FlightPhysicsComponent = CreateDefaultSubobject<UFlightPhysicsComponent>(TEXT("FlightPhysics"));
+
+	// Health component
+	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 }
 
 void AGliderPawn::OnConstruction(const FTransform& Transform)
@@ -63,6 +76,10 @@ void AGliderPawn::BeginPlay()
 
 	// Subscribe to event
 	FlightPhysicsComponent->OnDiveTick.AddDynamic(this, &AGliderPawn::OnDiveTickHandler );
+	FlightPhysicsComponent->OnMeshComponentHit.AddDynamic( this, &AGliderPawn::OnMeshComponentHitHandler );
+	FlightPhysicsComponent->OnMeshComponentMinorHit.AddDynamic(this, &AGliderPawn::OnMeshComponentMinorHitHandler);
+	FlightPhysicsComponent->OnMeshComponentMajorHit.AddDynamic(this, &AGliderPawn::OnMeshComponentMajorHitHandler);
+	HealthComponent->OnDeath.AddDynamic( this, &AGliderPawn::OnDeathHandler );
 }
 
 void AGliderPawn::Tick(float DeltaTime)
@@ -143,11 +160,6 @@ void AGliderPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("Halt", IE_Released, this, &AGliderPawn::StopHalt);
 }
 
-void AGliderPawn::Turn(float Value)
-{
-	CameraYaw += Value * MouseSensitivity;
-}
-
 void AGliderPawn::MovePitch(float Value)
 {
 	if (FMath::Abs(Value) <= KINDA_SMALL_NUMBER)
@@ -187,6 +199,49 @@ void AGliderPawn::MoveRoll(float Value)
 void AGliderPawn::OnDiveTickHandler(float DiveFactor)
 {
 	ChargeDashTick(DiveFactor);
+}
+
+void AGliderPawn::OnMeshComponentHitHandler()
+{
+	HealthComponent->ApplyDamage(RegularHitDamage);
+}
+
+void AGliderPawn::OnMeshComponentMinorHitHandler()
+{
+	HealthComponent->ApplyDamage(MinorHitDamage);
+}
+
+void AGliderPawn::OnMeshComponentMajorHitHandler()
+{
+	HealthComponent->ApplyDamage(MajorHitDamage);
+}
+
+void AGliderPawn::OnDeathHandler()
+{
+	if (!DeathPawnClass) return;
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	ADeathPawn* Wreck = GetWorld()->SpawnActor<ADeathPawn>(
+		DeathPawnClass,
+		MeshComponent->GetComponentTransform(),
+		Params
+	);
+
+	if (Wreck && MeshComponent)
+	{
+		Wreck->ApplyInheritedVelocity(MeshComponent->GetComponentVelocity());
+	}
+
+	// Switch control to newly spawned pawn
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		PC->SetViewTargetWithBlend(Wreck, 1.5f);
+		PC->Possess(Wreck);
+	}
+
+	Destroy();
 }
 
 void AGliderPawn::StartDash()
@@ -268,6 +323,11 @@ void AGliderPawn::StopHalt()
 
 	// Return original linear damping value
 	FlightPhysicsComponent->SetStaticMeshComponentLinearDampingOverride(LinearDampingBeforeHaltBackup);
+}
+
+void AGliderPawn::Turn(float Value)
+{
+	CameraYaw += Value * MouseSensitivity;
 }
 
 void AGliderPawn::LookUp(float Value)

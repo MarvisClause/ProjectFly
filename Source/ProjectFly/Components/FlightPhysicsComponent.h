@@ -6,6 +6,7 @@
 
 // Delegates
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDiveTick, float, DiveFactor);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMeshComponentHit);
 
 // Flight physics component is a complex logic, which tries to imitate flying mechanics and apply them to mesh component.
 // It is expectd, that given mesh component, won't utilize physic simulation and it will be handled by flight physics component itself.
@@ -57,6 +58,14 @@ public:
 	// Broadcasts when dive is happening
 	UPROPERTY(BlueprintAssignable, Category = "Flight Physics - Setup")
 	FOnDiveTick OnDiveTick;
+
+	// Broadcast when hit has happened
+	UPROPERTY(BlueprintAssignable, Category = "Flight Physics - Setup")
+	FOnMeshComponentHit OnMeshComponentHit;
+	UPROPERTY(BlueprintAssignable, Category = "Flight Physics - Setup")
+	FOnMeshComponentHit OnMeshComponentMinorHit;
+	UPROPERTY(BlueprintAssignable, Category = "Flight Physics - Setup")
+	FOnMeshComponentHit OnMeshComponentMajorHit;
 
 protected:
     virtual void BeginPlay() override;

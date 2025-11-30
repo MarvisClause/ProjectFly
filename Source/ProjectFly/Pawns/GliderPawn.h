@@ -8,6 +8,8 @@ class UStaticMeshComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UFlightPhysicsComponent;
+class UHealthComponent;
+class ADeathPawn;
 
 UCLASS()
 class PROJECTFLY_API AGliderPawn : public APawn
@@ -35,6 +37,12 @@ protected:
 
 private:
 	///////////////////////// Components
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Glider Control - Components", meta = (AllowPrivateAccess = "true"))
+	USceneComponent* RootSceneComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Glider Control - Components", meta = (AllowPrivateAccess = "true"))
+	USceneComponent* CameraFocusSceneComponent;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Glider Control - Components", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* MeshComponent;
@@ -47,6 +55,14 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Glider Control - Components", meta = (AllowPrivateAccess = "true"))
 	UFlightPhysicsComponent* FlightPhysicsComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Glider Control - Components", meta = (AllowPrivateAccess = "true"))
+	UHealthComponent* HealthComponent;
+
+	///////////////////////// Death pawn
+
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Death Pawn")
+	TSubclassOf<ADeathPawn> DeathPawnClass;
 
 	///////////////////////// Input variables
 	
@@ -101,6 +117,17 @@ private:
 	float HaltSpeedLinearDamping = 4.0f;
 
 	float LinearDampingBeforeHaltBackup = 0.0f;
+
+	///////////////////////// Damage Settings
+
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Damage", meta = (ClampMin = 0.0f))
+	float MinorHitDamage = 20.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
+	float MajorHitDamage = 55.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
+	float RegularHitDamage = 0.1f;
 
 	///////////////////////// Camera Settings
 
@@ -168,4 +195,14 @@ private:
 	// Handlers for events
 	UFUNCTION()
 	void OnDiveTickHandler(float DiveFactor);
+
+	UFUNCTION()
+	void OnMeshComponentHitHandler();
+	UFUNCTION()
+	void OnMeshComponentMinorHitHandler();
+	UFUNCTION()
+	void OnMeshComponentMajorHitHandler();
+
+	UFUNCTION()
+	void OnDeathHandler();
 };

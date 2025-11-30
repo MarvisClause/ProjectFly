@@ -133,6 +133,9 @@ void UFlightPhysicsComponent::OnMeshHit(
 
 	float SpeedLoss = 0.0f;
 
+	// Broadcast event
+	OnMeshComponentHit.Broadcast();
+
 	// In case of smaller impact ignore
 	if (ImpactStrength < MinorImpactThreshold)
 	{
@@ -142,11 +145,17 @@ void UFlightPhysicsComponent::OnMeshHit(
 	else if (ImpactStrength < MajorImpactThreshold)
 	{
 		SpeedLoss = ForwardSpeed * MinorImpactPercent;
+
+		// Broadcast event
+		OnMeshComponentMinorHit.Broadcast();
 	}
 	// Apply big impact
 	else
 	{
 		SpeedLoss = ForwardSpeed * MajorImpactPercent;
+
+		// Broadcast event
+		OnMeshComponentMajorHit.Broadcast();
 	}
 
 	// Calculate, if hit was a direct one or as scape one
@@ -187,21 +196,22 @@ void UFlightPhysicsComponent::CalculateSpeed()
 
 	if (Inclination < RiseInclinationThreshold)
 	{
-		// Dive acceleration
-		float DiveFactor = FMath::GetMappedRangeValueClamped(
-			FVector2D(RiseInclinationThreshold, -1.0f),
-			FVector2D(0, 1.0f),
-			Inclination);
-		float DiveAcceleration = FMath::Pow(DiveFactor, 1.8f) * (DiveSpeedIncreaseScalar * 1.8f);
-		AffectSpeed(DiveAcceleration * GetWorld()->DeltaTimeSeconds);
+		// Map dive factor from threshold ? -1
+		float DiveFactor = (RiseInclinationThreshold - Inclination) / (RiseInclinationThreshold + 1.0f);
+		DiveFactor = FMath::Clamp(DiveFactor, 0.0f, 1.0f);
 
-		// Broadcast dive event
+		float DiveAccel = FMath::Pow(DiveFactor, 1.8f) * (DiveSpeedIncreaseScalar * 1.8f);
+		AffectSpeed(DiveAccel * GetWorld()->DeltaTimeSeconds);
+
 		OnDiveTick.Broadcast(DiveFactor);
 	}
 	else
 	{
-		// Climb penalty
-		float RisePenalty = FMath::Pow(Inclination, 1.5f) * (RiseSpeedDecreaseScalar * 1.2f);
+		// Rise penalty is relative to climb angle only above threshold
+		float ClimbAngle = (Inclination - RiseInclinationThreshold) / (1.0f - RiseInclinationThreshold);
+		ClimbAngle = FMath::Clamp(ClimbAngle, 0.0f, 1.0f);
+
+		float RisePenalty = FMath::Pow(ClimbAngle, 1.5f) * (RiseSpeedDecreaseScalar * 1.2f);
 		AffectSpeed(-RisePenalty * GetWorld()->DeltaTimeSeconds);
 	}
 }
