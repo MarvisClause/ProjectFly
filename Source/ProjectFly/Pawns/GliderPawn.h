@@ -123,10 +123,10 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Damage", meta = (ClampMin = 0.0f))
 	float MinorHitDamage = 20.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Damage", meta = (ClampMin = 0.0f))
 	float MajorHitDamage = 55.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Damage", meta = (ClampMin = 0.0f))
 	float RegularHitDamage = 0.1f;
 
 	///////////////////////// Camera Settings
