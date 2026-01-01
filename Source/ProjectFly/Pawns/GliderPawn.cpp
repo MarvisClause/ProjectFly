@@ -22,33 +22,21 @@ AGliderPawn::AGliderPawn()
 
 	// Camera focus scene component
 	CameraFocusSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("CameraFocusSceneComponent"));
-	CameraFocusSceneComponent->SetupAttachment(MeshComponent);
+	CameraFocusSceneComponent->SetupAttachment(RootComponent);
 
 	// Spring Arm for camera orbit
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(CameraFocusSceneComponent);
 	SpringArm->TargetArmLength = 450.f;
-	SpringArm->bUsePawnControlRotation = false;
+	SpringArm->bEnableCameraLag = false;
 
-	SpringArm->bInheritPitch = false;
-	SpringArm->bInheritYaw = false;
+	SpringArm->bInheritPitch = true;
+	SpringArm->bInheritYaw = true;
 	SpringArm->bInheritRoll = false;
-
-	// Decouple from parent’s rotation
-	SpringArm->SetUsingAbsoluteRotation(true);
 
 	// Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm);
-
-	// Update tick groups for actor to handle issue with camera jittering, when camera lag in spring arm is enabled
-	PrimaryActorTick.bStartWithTickEnabled = true;
-	PrimaryActorTick.TickGroup = TG_DuringPhysics;
-	MeshComponent->SetTickGroup(TG_DuringPhysics);
-
-	// Make spring arm tick after physics has settled
-	SpringArm->PrimaryComponentTick.TickGroup = TG_PostPhysics;
-	Camera->PrimaryComponentTick.TickGroup = TG_PostPhysics;
 
 	// Flight physics component
 	FlightPhysicsComponent = CreateDefaultSubobject<UFlightPhysicsComponent>(TEXT("FlightPhysics"));
@@ -71,9 +59,6 @@ void AGliderPawn::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Update camera lag speed
-	StartEnablingCameraLag();
-
 	// Subscribe to event
 	FlightPhysicsComponent->OnDiveTick.AddDynamic(this, &AGliderPawn::OnDiveTickHandler );
 	FlightPhysicsComponent->OnMeshComponentHit.AddDynamic( this, &AGliderPawn::OnMeshComponentHitHandler );
@@ -89,11 +74,24 @@ void AGliderPawn::Tick(float DeltaTime)
 	///////////////////////// Camera/Target update
 	CameraPitch = FMath::Clamp(CameraPitch, -90.f, 90.f);
 	FRotator NewRotation(CameraPitch, CameraYaw, 0.0f);
-	SpringArm->SetWorldRotation(NewRotation);
-	FlightPhysicsComponent->SetTargetAutopilotPosition(MeshComponent->GetComponentLocation() + Camera->GetForwardVector() * 1000.0f);
+	CameraFocusSceneComponent->SetWorldRotation(NewRotation);
 
-	///////////////////////// Calculate camera lag
-	UpdateCameraLagTransition(DeltaTime);
+	FVector TargetLocation = MeshComponent->GetComponentLocation();
+	FVector CurrentLocation = CameraFocusSceneComponent->GetComponentLocation();
+
+	// Critically damped spring formula
+	FVector Delta = TargetLocation - CurrentLocation;
+	FVector Acceleration = Delta * CameraSpringStiffness - CameraVelocity * CameraSpringDamping;
+	CameraVelocity += Acceleration * DeltaTime;
+
+	// Clamp max movement to prevent overshoot at high speed
+	FVector MoveStep = CameraVelocity * DeltaTime;
+	float MaxMoveThisFrame = CameraMaxMovePerSecond * DeltaTime;
+	MoveStep = MoveStep.GetClampedToMaxSize(MaxMoveThisFrame);
+
+	CameraFocusSceneComponent->SetWorldLocation(CurrentLocation + MoveStep);
+
+	FlightPhysicsComponent->SetTargetAutopilotPosition(MeshComponent->GetComponentLocation() + Camera->GetForwardVector() * 1000.0f);
 
 	///////////////////////// Halt application
 	if (bHaltInputActive)
@@ -120,16 +118,6 @@ void AGliderPawn::Tick(float DeltaTime)
 void AGliderPawn::AffectDashStamina(float Stamina)
 {
 	CurrentDashStamina = FMath::Clamp(CurrentDashStamina + Stamina, 0.0f, MaximumDashStamina);
-}
-
-void AGliderPawn::StartRemovingCameraLag()
-{
-	CameraLagState = ECameraLagTransitionState::Increasing;
-}
-
-void AGliderPawn::StartEnablingCameraLag()
-{
-	CameraLagState = ECameraLagTransitionState::Decreasing;
 }
 
 UStaticMeshComponent* AGliderPawn::GetStaticMesh() const
@@ -372,54 +360,4 @@ void AGliderPawn::DisableAggressiveTurnAngleTemporarily()
 		AggressiveTurnAngleDisableTimeout,
 		false
 	);
-}
-
-void AGliderPawn::UpdateCameraLagTransition(float DeltaTime)
-{
-	if (!SpringArm)
-		return;
-
-	switch (CameraLagState)
-	{
-	case ECameraLagTransitionState::Increasing:
-	{
-		// Smoothly increase towards max
-		SpringArm->CameraLagSpeed = FMath::FInterpTo(
-			SpringArm->CameraLagSpeed,
-			MaxLagSpeed,
-			DeltaTime,
-			CameraLagTransitionSpeedToMax
-		);
-
-		// If reached nearly max, stop transition
-		if (FMath::IsNearlyEqual(SpringArm->CameraLagSpeed, MaxLagSpeed, 1.0f))
-		{
-			SpringArm->CameraLagSpeed = MaxLagSpeed;
-			CameraLagState = ECameraLagTransitionState::None;
-		}
-		break;
-	}
-
-	case ECameraLagTransitionState::Decreasing:
-	{
-		// Smoothly decrease towards normal
-		SpringArm->CameraLagSpeed = FMath::FInterpTo(
-			SpringArm->CameraLagSpeed,
-			NormalLagSpeed,
-			DeltaTime,
-			CameraLagTransitionSpeedToNormal
-		);
-
-		// If reached nearly normal, stop transition
-		if (FMath::IsNearlyEqual(SpringArm->CameraLagSpeed, NormalLagSpeed, 1.0f))
-		{
-			SpringArm->CameraLagSpeed = NormalLagSpeed;
-			CameraLagState = ECameraLagTransitionState::None;
-		}
-		break;
-	}
-
-	default:
-		break;
-	}
 }

@@ -24,9 +24,6 @@ public:
 
 	void AffectDashStamina(float Stamina);
 
-	void StartRemovingCameraLag();
-	void StartEnablingCameraLag();
-
 	UStaticMeshComponent* GetStaticMesh() const;
 
 	UFlightPhysicsComponent* AccessFlightPhysicsComponent();
@@ -127,33 +124,23 @@ private:
 	float MajorHitDamage = 55.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Damage", meta = (ClampMin = 0.0f))
-	float RegularHitDamage = 0.1f;
+	float RegularHitDamage = 1.0f;
 
 	///////////////////////// Camera Settings
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
 	float MouseSensitivity = 1.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
-	float NormalLagSpeed = 25.0f;
+	FVector CameraVelocity = FVector::ZeroVector;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
-	float MaxLagSpeed = 1000.0f;
+	float CameraSpringStiffness = 400.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
-	float CameraLagTransitionSpeedToNormal = 2.0f;
+	float CameraSpringDamping = 20.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
-	float CameraLagTransitionSpeedToMax = 0.05f;
-
-	// Camera Lag Transition State
-	enum class ECameraLagTransitionState
-	{
-		None,
-		Increasing,
-		Decreasing
-	};
-	ECameraLagTransitionState CameraLagState = ECameraLagTransitionState::None;
+	float CameraMaxMovePerSecond = 32000.0f;
 
 	///////////////////////// Timer for roll logic control
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Aggressive Turn Angle Disable Timeout", meta = (ClampMin = 0.1f))
@@ -170,9 +157,6 @@ private:
 
 	// Roll controls
 	void DisableAggressiveTurnAngleTemporarily();
-
-	// Camera
-	void UpdateCameraLagTransition(float DeltaTime);
 
 	// Dash
 	void StartDash();

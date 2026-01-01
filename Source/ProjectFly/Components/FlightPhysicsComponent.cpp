@@ -7,7 +7,6 @@ UFlightPhysicsComponent::UFlightPhysicsComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = true;
-	PrimaryComponentTick.TickGroup = TG_PrePhysics;
 }
 
 void UFlightPhysicsComponent::BeginPlay()

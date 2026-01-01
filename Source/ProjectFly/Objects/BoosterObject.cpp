@@ -72,9 +72,6 @@ void ABoosterObject::OnTriggerAreaBeginOverlap(UPrimitiveComponent* OverlappedCo
 
         // Add with zero influence
         AffectedGlidersArray.Add(TTuple<TObjectPtr<AGliderPawn>, float>(Glider, 0.f));
-
-        // Start removing camera lag
-        Glider->StartRemovingCameraLag();
     }
 
     PrimaryActorTick.SetTickFunctionEnable(AffectedGlidersArray.Num() > 0 || ExitingGlidersArray.Num() > 0);
@@ -94,9 +91,6 @@ void ABoosterObject::OnTriggerAreaEndOverlap(UPrimitiveComponent* OverlappedComp
             // Add to exiting list (start falloff timer)
             ExitingGlidersArray.Add(TTuple<TObjectPtr<AGliderPawn>, float>(Glider, 0.0f));
         }
-
-        // Start enabling camera lag
-        Glider->StartEnablingCameraLag();
     }
 
     PrimaryActorTick.SetTickFunctionEnable(AffectedGlidersArray.Num() > 0 || ExitingGlidersArray.Num() > 0);
