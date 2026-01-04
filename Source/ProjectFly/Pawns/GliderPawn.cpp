@@ -75,22 +75,19 @@ void AGliderPawn::Tick(float DeltaTime)
 	// Clamp base camera pitch
 	CameraPitch = FMath::Clamp(CameraPitch, -90.f, 90.f);
 
-	// When freelooking is inactive, return offsets to zero
+	// When freelooking is inactive, return offsets to zero along shortest path
 	if (!bFreeLookActive)
 	{
-		FreeLookYaw = FMath::FInterpTo(
-			FreeLookYaw,
-			0.f,
-			DeltaTime,
-			FreeLookReturnSpeed
-		);
+		// Yaw shortest-path interpolation
+		const float YawDelta = FMath::FindDeltaAngleDegrees(FreeLookYaw, 0.f);
+		FreeLookYaw += YawDelta * FMath::Clamp(DeltaTime * FreeLookReturnSpeed, 0.f, 1.f);
 
-		FreeLookPitch = FMath::FInterpTo(
-			FreeLookPitch,
-			0.f,
-			DeltaTime,
-			FreeLookReturnSpeed
-		);
+		// Pitch linear interpolation (shortest path not needed for pitch)
+		const float PitchDelta = 0.f - FreeLookPitch;
+		FreeLookPitch += PitchDelta * FMath::Clamp(DeltaTime * FreeLookReturnSpeed, 0.f, 1.f);
+
+		// Normalize yaw to prevent drift
+		FreeLookYaw = FMath::UnwindDegrees(FreeLookYaw);
 	}
 
 	// Final camera rotation includes mesh-facing and offset
@@ -358,7 +355,7 @@ void AGliderPawn::StopFreeLook()
 
 	const FRotator MeshRot = MeshComponent->GetComponentRotation();
 
-	// Compute shortest deltas
+	// Compute shortest-path delta
 	const float YawDelta = FMath::FindDeltaAngleDegrees(CameraYaw, MeshRot.Yaw);
 	const float PitchDelta = CameraPitch - MeshRot.Pitch;
 
@@ -368,7 +365,7 @@ void AGliderPawn::StopFreeLook()
 	CameraYaw = MeshRot.Yaw;
 	CameraPitch = MeshRot.Pitch;
 
-	// Normalize to avoid drift
+	// Normalize to avoid drift over time
 	FreeLookYaw = FMath::UnwindDegrees(FreeLookYaw);
 }
 
