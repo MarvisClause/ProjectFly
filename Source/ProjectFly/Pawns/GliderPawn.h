@@ -143,6 +143,21 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
 	float FOVInterpSpeed = 8.f;
 
+	// Free look state
+	bool bFreeLookActive = false;
+
+	// Camera rotation offsets (relative to mesh)
+	float FreeLookYaw = 0.f;
+	float FreeLookPitch = 0.f;
+
+	// Return-to-center
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
+	float FreeLookReturnSpeed = 6.f;
+
+	// Limits
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
+	float MaxFreeLookPitch = 180.f;
+
 	///////////////////////// Timer for roll logic control
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Aggressive Turn Angle Disable Timeout", meta = (ClampMin = 0.1f))
 	float AggressiveTurnAngleDisableTimeout = 0.5f;

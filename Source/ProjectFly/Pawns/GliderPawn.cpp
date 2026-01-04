@@ -72,9 +72,36 @@ void AGliderPawn::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	///////////////////////// Camera/Target update
+	// Clamp base camera pitch
 	CameraPitch = FMath::Clamp(CameraPitch, -90.f, 90.f);
-	FRotator NewRotation(CameraPitch, CameraYaw, 0.0f);
-	SpringArm->SetWorldRotation(NewRotation);
+
+	// When freelooking is inactive, return offsets to zero
+	if (!bFreeLookActive)
+	{
+		FreeLookYaw = FMath::FInterpTo(
+			FreeLookYaw,
+			0.f,
+			DeltaTime,
+			FreeLookReturnSpeed
+		);
+
+		FreeLookPitch = FMath::FInterpTo(
+			FreeLookPitch,
+			0.f,
+			DeltaTime,
+			FreeLookReturnSpeed
+		);
+	}
+
+	// Final camera rotation includes mesh-facing and offset
+	FRotator FinalCameraRotation(
+		CameraPitch + FreeLookPitch,
+		CameraYaw + FreeLookYaw,
+		0.f
+	);
+
+	// Apply to spring arm
+	SpringArm->SetWorldRotation(FinalCameraRotation);
 	FlightPhysicsComponent->SetTargetAutopilotPosition(MeshComponent->GetComponentLocation() + Camera->GetForwardVector() * 1000.0f);
 
 	float SpeedAlpha = FMath::GetMappedRangeValueClamped(
@@ -318,22 +345,56 @@ void AGliderPawn::StopHalt()
 
 void AGliderPawn::StartFreeLook()
 {
+	bFreeLookActive = true;
+
 	FlightPhysicsComponent->SetAutopilotState(false);
 }
 
 void AGliderPawn::StopFreeLook()
 {
+	bFreeLookActive = false;
+
 	FlightPhysicsComponent->SetAutopilotState(true);
+
+	const FRotator MeshRot = MeshComponent->GetComponentRotation();
+
+	// Compute shortest deltas
+	const float YawDelta = FMath::FindDeltaAngleDegrees(CameraYaw, MeshRot.Yaw);
+	const float PitchDelta = CameraPitch - MeshRot.Pitch;
+
+	FreeLookYaw += YawDelta;
+	FreeLookPitch += PitchDelta;
+
+	CameraYaw = MeshRot.Yaw;
+	CameraPitch = MeshRot.Pitch;
+
+	// Normalize to avoid drift
+	FreeLookYaw = FMath::UnwindDegrees(FreeLookYaw);
 }
 
 void AGliderPawn::Turn(float Value)
 {
-	CameraYaw += Value * MouseSensitivity;
+	if (bFreeLookActive)
+	{
+		FreeLookYaw += Value * MouseSensitivity;
+	}
+	else
+	{
+		CameraYaw += Value * MouseSensitivity;
+	}
 }
 
 void AGliderPawn::LookUp(float Value)
 {
-	CameraPitch += Value * MouseSensitivity;
+	if (bFreeLookActive)
+	{
+		FreeLookPitch += Value * MouseSensitivity;
+		FreeLookPitch = FMath::Clamp(FreeLookPitch, -MaxFreeLookPitch, MaxFreeLookPitch);
+	}
+	else
+	{
+		CameraPitch += Value * MouseSensitivity;
+	}
 }
 
 void AGliderPawn::DisableAutopilotTemporarily()

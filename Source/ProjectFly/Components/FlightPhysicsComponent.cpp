@@ -82,7 +82,7 @@ void UFlightPhysicsComponent::MoveYaw(float Value)
 	}
 
 	float Responsiveness = FMath::GetMappedRangeValueClamped(
-		FVector2D(MinimumAirControl, MaximumAirControl),
+		FVector2D(MinimumSpeed, MaximumSpeed),
 		FVector2D(MoveYawMinResponsivenessScalar, MoveYawMaxResponsivenessScalar),
 		ForwardSpeed
 	);
