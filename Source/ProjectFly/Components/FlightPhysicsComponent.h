@@ -29,10 +29,15 @@ public:
 
 	// Affects speed from outter source
     void AffectSpeed(float Speed);
+	float GetForwardSpeed() const { return ForwardSpeed; }
+	float GetMinimumSpeed() const { return MinimumSpeed; }
+	float GetMaximumSpeed() const { return MaximumSpeed; }
 
 	// Allows outside system to eanble or disable specific states of flight physics component
 	void SetGravityEnabled(bool bIsEnabled) { bGravityEnabled = bIsEnabled; }
 	void SetLiftEnabled(bool bIsEnabled) { bLiftEnabled = bIsEnabled; }
+
+	bool GetAutopilotState() const { return bAutopilotEnabled; }
 	void SetAutopilotState(bool bIsEnabled) { bAutopilotEnabled = bIsEnabled; }
 
 	// Autopilot aggressive turn angle

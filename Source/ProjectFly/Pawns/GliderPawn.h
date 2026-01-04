@@ -131,16 +131,17 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
 	float MouseSensitivity = 1.0f;
 
-	FVector CameraVelocity = FVector::ZeroVector;
+	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
+	float BaseFOV = 90.f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
-	float CameraSpringStiffness = 400.0f;
+	float MaxFOV = 120.f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
-	float CameraSpringDamping = 20.0f;
+	float DashFOVScalar = 10.f;
 
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Camera", meta = (ClampMin = 0.0f))
-	float CameraMaxMovePerSecond = 32000.0f;
+	float FOVInterpSpeed = 8.f;
 
 	///////////////////////// Timer for roll logic control
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Aggressive Turn Angle Disable Timeout", meta = (ClampMin = 0.1f))
@@ -166,6 +167,10 @@ private:
 	// Halt
 	void StartHalt();
 	void StopHalt();
+	
+	// Free Look
+	void StartFreeLook();
+	void StopFreeLook();
 
 	// Mouse input handlers
 	void LookUp(float Value);

@@ -11,28 +11,28 @@ AGliderPawn::AGliderPawn()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	// Main scene component
-	RootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootSceneComponent"));
-	RootComponent = RootSceneComponent;
+	RootComponent = MeshComponent;
 
 	// Mesh component, main moving element of glider pawn
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
-	MeshComponent->SetupAttachment(RootComponent);
 	MeshComponent->SetNotifyRigidBodyCollision(true);
 
 	// Camera focus scene component
 	CameraFocusSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("CameraFocusSceneComponent"));
-	CameraFocusSceneComponent->SetupAttachment(RootComponent);
+	CameraFocusSceneComponent->SetupAttachment(MeshComponent);
 
 	// Spring Arm for camera orbit
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(CameraFocusSceneComponent);
 	SpringArm->TargetArmLength = 450.f;
-	SpringArm->bEnableCameraLag = false;
+	SpringArm->bUsePawnControlRotation = false;
 
-	SpringArm->bInheritPitch = true;
-	SpringArm->bInheritYaw = true;
+	SpringArm->bInheritPitch = false;
+	SpringArm->bInheritYaw = false;
 	SpringArm->bInheritRoll = false;
+
+	// Decouple from parent’s rotation
+	SpringArm->SetUsingAbsoluteRotation(true);
 
 	// Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -74,24 +74,24 @@ void AGliderPawn::Tick(float DeltaTime)
 	///////////////////////// Camera/Target update
 	CameraPitch = FMath::Clamp(CameraPitch, -90.f, 90.f);
 	FRotator NewRotation(CameraPitch, CameraYaw, 0.0f);
-	CameraFocusSceneComponent->SetWorldRotation(NewRotation);
-
-	FVector TargetLocation = MeshComponent->GetComponentLocation();
-	FVector CurrentLocation = CameraFocusSceneComponent->GetComponentLocation();
-
-	// Critically damped spring formula
-	FVector Delta = TargetLocation - CurrentLocation;
-	FVector Acceleration = Delta * CameraSpringStiffness - CameraVelocity * CameraSpringDamping;
-	CameraVelocity += Acceleration * DeltaTime;
-
-	// Clamp max movement to prevent overshoot at high speed
-	FVector MoveStep = CameraVelocity * DeltaTime;
-	float MaxMoveThisFrame = CameraMaxMovePerSecond * DeltaTime;
-	MoveStep = MoveStep.GetClampedToMaxSize(MaxMoveThisFrame);
-
-	CameraFocusSceneComponent->SetWorldLocation(CurrentLocation + MoveStep);
-
+	SpringArm->SetWorldRotation(NewRotation);
 	FlightPhysicsComponent->SetTargetAutopilotPosition(MeshComponent->GetComponentLocation() + Camera->GetForwardVector() * 1000.0f);
+
+	float SpeedAlpha = FMath::GetMappedRangeValueClamped(
+		FVector2D(FlightPhysicsComponent->GetMinimumSpeed(), FlightPhysicsComponent->GetMaximumSpeed()),
+		FVector2D(0.f, 1.f),
+		FlightPhysicsComponent->GetForwardSpeed()
+	);
+
+	float TargetFOV = FMath::Lerp(BaseFOV, MaxFOV, SpeedAlpha);
+
+	// Dash adds punch
+	if (bIsChargingDash)
+	{
+		TargetFOV += DashFOVScalar * DashChargePercent;
+	}
+
+	Camera->SetFieldOfView(FMath::FInterpTo(Camera->FieldOfView, TargetFOV, DeltaTime, FOVInterpSpeed));
 
 	///////////////////////// Halt application
 	if (bHaltInputActive)
@@ -146,6 +146,9 @@ void AGliderPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	
 	PlayerInputComponent->BindAction("Halt", IE_Pressed, this, &AGliderPawn::StartHalt);
 	PlayerInputComponent->BindAction("Halt", IE_Released, this, &AGliderPawn::StopHalt);
+
+	PlayerInputComponent->BindAction("FreeLook", IE_Pressed, this, &AGliderPawn::StartFreeLook); 
+	PlayerInputComponent->BindAction("FreeLook", IE_Released, this, &AGliderPawn::StopFreeLook);
 }
 
 void AGliderPawn::MovePitch(float Value)
@@ -313,6 +316,16 @@ void AGliderPawn::StopHalt()
 	FlightPhysicsComponent->SetStaticMeshComponentLinearDampingOverride(LinearDampingBeforeHaltBackup);
 }
 
+void AGliderPawn::StartFreeLook()
+{
+	FlightPhysicsComponent->SetAutopilotState(false);
+}
+
+void AGliderPawn::StopFreeLook()
+{
+	FlightPhysicsComponent->SetAutopilotState(true);
+}
+
 void AGliderPawn::Turn(float Value)
 {
 	CameraYaw += Value * MouseSensitivity;
@@ -325,6 +338,11 @@ void AGliderPawn::LookUp(float Value)
 
 void AGliderPawn::DisableAutopilotTemporarily()
 {
+	if (FlightPhysicsComponent->GetAutopilotState() == false)
+	{
+		return;
+	}
+
 	FlightPhysicsComponent->SetAutopilotState(false);
 
 	GetWorld()->GetTimerManager().ClearTimer(DisableAutopilotEnableTimer);
