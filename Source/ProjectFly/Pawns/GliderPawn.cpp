@@ -73,7 +73,7 @@ void AGliderPawn::Tick(float DeltaTime)
 
 	///////////////////////// Camera/Target update
 	// Clamp base camera pitch
-	CameraPitch = FMath::Clamp(CameraPitch, -90.f, 90.f);
+	DirectionCameraPitch = FMath::Clamp(DirectionCameraPitch, -90.f, 90.f);
 
 	// When freelooking is inactive, return offsets to zero along shortest path
 	if (!bFreeLookActive)
@@ -92,15 +92,31 @@ void AGliderPawn::Tick(float DeltaTime)
 
 	// Final camera rotation includes mesh-facing and offset
 	FRotator FinalCameraRotation(
-		CameraPitch + FreeLookPitch,
-		CameraYaw + FreeLookYaw,
+		DirectionCameraPitch + FreeLookPitch,
+		DirectionCameraYaw + FreeLookYaw,
 		0.f
 	);
 
 	// Apply to spring arm
 	SpringArm->SetWorldRotation(FinalCameraRotation);
-	FlightPhysicsComponent->SetTargetAutopilotPosition(MeshComponent->GetComponentLocation() + Camera->GetForwardVector() * 1000.0f);
 
+	if (bFreeLookActive)
+	{
+		FlightPhysicsComponent->SetTargetAutopilotPosition(MeshComponent->GetComponentLocation() + MeshComponent->GetForwardVector() * 1000.0f);
+	}
+	else
+	{
+		FRotator DirectionCameraRotation(
+			DirectionCameraPitch,
+			DirectionCameraYaw,
+			0.f
+		);
+
+		FlightPhysicsComponent->SetTargetAutopilotPosition(MeshComponent->GetComponentLocation() + DirectionCameraRotation.Vector() * 1000.0f);
+	}
+
+
+	// FOV calculationg
 	float SpeedAlpha = FMath::GetMappedRangeValueClamped(
 		FVector2D(FlightPhysicsComponent->GetMinimumSpeed(), FlightPhysicsComponent->GetMaximumSpeed()),
 		FVector2D(0.f, 1.f),
@@ -343,27 +359,23 @@ void AGliderPawn::StopHalt()
 void AGliderPawn::StartFreeLook()
 {
 	bFreeLookActive = true;
-
-	FlightPhysicsComponent->SetAutopilotState(false);
 }
 
 void AGliderPawn::StopFreeLook()
 {
 	bFreeLookActive = false;
 
-	FlightPhysicsComponent->SetAutopilotState(true);
-
 	const FRotator MeshRot = MeshComponent->GetComponentRotation();
 
 	// Compute shortest-path delta
-	const float YawDelta = FMath::FindDeltaAngleDegrees(CameraYaw, MeshRot.Yaw);
-	const float PitchDelta = CameraPitch - MeshRot.Pitch;
+	const float YawDelta = DirectionCameraYaw - MeshRot.Yaw;
+	const float PitchDelta = DirectionCameraPitch - MeshRot.Pitch;
 
 	FreeLookYaw += YawDelta;
 	FreeLookPitch += PitchDelta;
 
-	CameraYaw = MeshRot.Yaw;
-	CameraPitch = MeshRot.Pitch;
+	DirectionCameraYaw = MeshRot.Yaw;
+	DirectionCameraPitch = MeshRot.Pitch;
 
 	// Normalize to avoid drift over time
 	FreeLookYaw = FMath::UnwindDegrees(FreeLookYaw);
@@ -377,7 +389,7 @@ void AGliderPawn::Turn(float Value)
 	}
 	else
 	{
-		CameraYaw += Value * MouseSensitivity;
+		DirectionCameraYaw += Value * MouseSensitivity;
 	}
 }
 
@@ -390,7 +402,7 @@ void AGliderPawn::LookUp(float Value)
 	}
 	else
 	{
-		CameraPitch += Value * MouseSensitivity;
+		DirectionCameraPitch += Value * MouseSensitivity;
 	}
 }
 
