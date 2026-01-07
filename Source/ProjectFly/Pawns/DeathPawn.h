@@ -57,8 +57,8 @@ private:
 
 	///////////////////////// Input variables
 
-	float CameraYaw;
-	float CameraPitch;
+	float DirectionCameraYaw;
+	float DirectionCameraPitch;
 
 	///////////////////////// Methods
 

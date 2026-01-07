@@ -63,8 +63,8 @@ private:
 
 	///////////////////////// Input variables
 	
-	float CameraYaw;
-	float CameraPitch;
+	float DirectionCameraYaw;
+	float DirectionCameraPitch;
 
 	///////////////////////// Dash/Charge
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Glider Control - Dash", meta = (AllowPrivateAccess = "true"))

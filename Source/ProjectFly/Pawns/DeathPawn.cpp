@@ -58,8 +58,8 @@ void ADeathPawn::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	///////////////////////// Camera/Target update
-	CameraPitch = FMath::Clamp(CameraPitch, -90.f, 90.f);
-	FRotator NewRotation(CameraPitch, CameraYaw, 0.0f);
+	DirectionCameraPitch = FMath::Clamp(DirectionCameraPitch, -90.f, 90.f);
+	FRotator NewRotation(DirectionCameraPitch, DirectionCameraYaw, 0.0f);
 	SpringArm->SetWorldRotation(NewRotation);
 }
 
@@ -84,10 +84,10 @@ void ADeathPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 
 void ADeathPawn::Turn(float Value)
 {
-	CameraYaw += Value * MouseSensitivity;
+	DirectionCameraYaw += Value * MouseSensitivity;
 }
 
 void ADeathPawn::LookUp(float Value)
 {
-	CameraPitch += Value * MouseSensitivity;
+	DirectionCameraPitch += Value * MouseSensitivity;
 }
