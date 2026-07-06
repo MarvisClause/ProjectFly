@@ -67,6 +67,19 @@ void AGliderPawn::BeginPlay()
 	HealthComponent->OnDeath.AddDynamic( this, &AGliderPawn::OnDeathHandler );
 }
 
+void AGliderPawn::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+
+	FlightPhysicsComponent->OnDiveTick.RemoveAll(this);
+	FlightPhysicsComponent->OnMeshComponentHit.RemoveAll(this);
+	FlightPhysicsComponent->OnMeshComponentMinorHit.RemoveAll(this);
+	FlightPhysicsComponent->OnMeshComponentMajorHit.RemoveAll(this);
+	HealthComponent->OnDeath.RemoveAll(this);
+
+	Super::EndPlay(EndPlayReason);
+}
+
 void AGliderPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -168,6 +181,11 @@ UStaticMeshComponent* AGliderPawn::GetStaticMesh() const
 UFlightPhysicsComponent* AGliderPawn::AccessFlightPhysicsComponent()
 {
 	return FlightPhysicsComponent;
+}
+
+UHealthComponent* AGliderPawn::AccessHealthComponent()
+{
+	return HealthComponent;
 }
 
 void AGliderPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -304,18 +322,12 @@ void AGliderPawn::ReleaseDash()
 	DashForceRemaining = DashStrengthApplied;
 	DashForcePerTick = DashStrengthApplied / (DashDuration / GetWorld()->GetDeltaSeconds());
 
-	GetWorld()->GetTimerManager().SetTimer(DashForceTimer, [this]()
-		{
-			if (DashForceRemaining <= 0.f)
-			{
-				GetWorld()->GetTimerManager().ClearTimer(DashForceTimer);
-				return;
-			}
-
-			MeshComponent->AddForce(MeshComponent->GetForwardVector() * DashForceRemaining);
-			DashForceRemaining -= DashForcePerTick;
-
-		}, GetWorld()->GetDeltaSeconds(), true);
+	GetWorldTimerManager().SetTimer(
+		DashForceTimer,
+		this,
+		&AGliderPawn::ApplyDashForce,
+		GetWorld()->GetDeltaSeconds(),
+		true);
 
 	// Increase forward speed
 	float DashSpeedBoost = FMath::Lerp(0.0f, DashMaximumForwardBoost, DashChargePercent);
@@ -335,6 +347,26 @@ void AGliderPawn::ChargeDashTick(float DiveFactor)
 		CurrentDashStamina += RechargeAmount;
 		CurrentDashStamina = FMath::Min(CurrentDashStamina, MaximumDashStamina);
 	}
+}
+
+void AGliderPawn::ApplyDashForce()
+{
+	if (DashForceRemaining <= 0.f)
+	{
+		GetWorldTimerManager().ClearTimer(DashForceTimer);
+		return;
+	}
+
+	if (!MeshComponent)
+	{
+		GetWorldTimerManager().ClearTimer(DashForceTimer);
+		return;
+	}
+
+	MeshComponent->AddForce(
+		MeshComponent->GetForwardVector() * DashForceRemaining);
+
+	DashForceRemaining -= DashForcePerTick;
 }
 
 void AGliderPawn::StartHalt()
@@ -406,6 +438,14 @@ void AGliderPawn::LookUp(float Value)
 	}
 }
 
+void AGliderPawn::EnableAutopilot()
+{
+	if (FlightPhysicsComponent)
+	{
+		FlightPhysicsComponent->SetAutopilotState(true);
+	}
+}
+
 void AGliderPawn::DisableAutopilotTemporarily()
 {
 	if (FlightPhysicsComponent->GetAutopilotState() == false)
@@ -418,13 +458,10 @@ void AGliderPawn::DisableAutopilotTemporarily()
 	GetWorld()->GetTimerManager().ClearTimer(DisableAutopilotEnableTimer);
 	GetWorldTimerManager().SetTimer(
 		DisableAutopilotEnableTimer,
-		[this]()
-		{
-			FlightPhysicsComponent->SetAutopilotState(true);
-		},
+		this,
+		&AGliderPawn::EnableAutopilot,
 		DisableAutopilotTimeout,
-		false
-	);
+		false);
 }
 
 void AGliderPawn::DisableAggressiveTurnAngleTemporarily()
@@ -441,11 +478,16 @@ void AGliderPawn::DisableAggressiveTurnAngleTemporarily()
 	GetWorld()->GetTimerManager().ClearTimer(EnableAggressiveTurnAngleTimer);
 	GetWorldTimerManager().SetTimer(
 		EnableAggressiveTurnAngleTimer,
-		[this, OldAggressiveTurnValue]()
-		{
-			FlightPhysicsComponent->SetAutopilotAggressiveTurnAngle(OldAggressiveTurnValue);
-		},
+		this,
+		&AGliderPawn::RestoreAggressiveTurnAngle,
 		AggressiveTurnAngleDisableTimeout,
-		false
-	);
+		false);
+}
+
+void AGliderPawn::RestoreAggressiveTurnAngle()
+{
+	if (FlightPhysicsComponent)
+	{
+		FlightPhysicsComponent->SetAutopilotAggressiveTurnAngle(PreviousAggressiveTurnAngle);
+	}
 }

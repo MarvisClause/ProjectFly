@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -8,9 +6,7 @@
 
 class UButton;
 
-/**
- * Controls main menu elements
- */
+// Controls main menu elements 
 UCLASS(Abstract)
 class PROJECTFLY_API UMainMenuUserWidget : public UUserWidget
 {
@@ -19,21 +15,30 @@ class PROJECTFLY_API UMainMenuUserWidget : public UUserWidget
 protected:
     virtual void NativeConstruct() override;
 
+    virtual void NativeDestruct() override;
+
     // Name of the game level
-    UPROPERTY(EditDefaultsOnly)
-    FName GameLevelName;
+    UPROPERTY(EditDefaultsOnly, Category="Main Menu")
+    TSoftObjectPtr<UWorld> GameLevel;
 
-    // Score count
+    // Continue game button
     UPROPERTY(Transient, meta = (BindWidget))
-    TObjectPtr<UButton> StartGameButton;
+    TObjectPtr<UButton> ContinueGameButton;
 
-    // Target count
+    // New game button
+    UPROPERTY(Transient, meta = (BindWidget))
+    TObjectPtr<UButton> NewGameButton;
+
+    // Quit game button
     UPROPERTY(Transient, meta = (BindWidget))
     TObjectPtr<UButton> QuitGameButton;
 
 private:
     UFUNCTION()
-    void StartGameButtonAction();
+    void ContinueGameButtonAction();
+
+    UFUNCTION()
+    void NewGameButtonAction();
 
     UFUNCTION()
     void QuitGameButtonAction();

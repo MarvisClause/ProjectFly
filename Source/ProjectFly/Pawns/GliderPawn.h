@@ -28,8 +28,11 @@ public:
 
 	UFlightPhysicsComponent* AccessFlightPhysicsComponent();
 
+	UHealthComponent* AccessHealthComponent();
+
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
@@ -169,15 +172,19 @@ private:
 	FTimerHandle DisableAutopilotEnableTimer;
 
 	// Autopilot state control
+	void EnableAutopilot();
 	void DisableAutopilotTemporarily();
 
 	// Roll controls
 	void DisableAggressiveTurnAngleTemporarily();
+	void RestoreAggressiveTurnAngle();
+	float PreviousAggressiveTurnAngle = 0.0f;
 
 	// Dash
 	void StartDash();
 	void ReleaseDash();
 	void ChargeDashTick(float DiveFactor);
+	void ApplyDashForce();
 
 	// Halt
 	void StartHalt();
