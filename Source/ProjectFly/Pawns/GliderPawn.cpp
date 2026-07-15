@@ -471,7 +471,7 @@ void AGliderPawn::DisableAggressiveTurnAngleTemporarily()
 		return;
 	}
 	
-	float OldAggressiveTurnValue = FlightPhysicsComponent->GetAutopilotAggressiveTurnAngle();
+	PreviousAggressiveTurnAngle = FlightPhysicsComponent->GetAutopilotAggressiveTurnAngle();
 	FlightPhysicsComponent->SetAutopilotAggressiveTurnAngle(0.0f);
 
 	// Reset the timer each time we detect input

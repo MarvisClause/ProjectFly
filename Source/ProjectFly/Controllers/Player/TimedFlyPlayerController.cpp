@@ -43,9 +43,11 @@ void ATimedFlyPlayerController::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-    HUDWidget->SetHealth(GliderPawn->AccessHealthComponent()->CurrentHealth);
-
-    HUDWidget->SetSpeed(GliderPawn->AccessFlightPhysicsComponent()->GetForwardSpeed());
+    if ( GliderPawn.Get() )
+    {
+        HUDWidget->SetHealth(GliderPawn->AccessHealthComponent()->CurrentHealth);
+        HUDWidget->SetSpeed(GliderPawn->AccessFlightPhysicsComponent()->GetForwardSpeed());
+    }
 
     HUDWidget->SetTime(TimedFlyGameMode->GetCurrentTimeInSeconds());
 }
