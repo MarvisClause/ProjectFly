@@ -1,10 +1,13 @@
 #include "MainMenuPlayerController.h"
 #include "ProjectFly/UI/MainMenu/MainMenuUserWidget.h"
+#include "ProjectFly/Pawns/GliderPawn.h"
+#include "Kismet/GameplayStatics.h"
 
 void AMainMenuPlayerController::BeginPlay()
 {
     Super::BeginPlay();
 
+    // Initialize widgets
     check(MainMenuWidgetClass);
 
     MainMenuWidget = CreateWidget<UMainMenuUserWidget>(this, MainMenuWidgetClass);
@@ -12,7 +15,15 @@ void AMainMenuPlayerController::BeginPlay()
 
     MainMenuWidget->AddToViewport();
 
+    // Initialize input
+    FInputModeGameAndUI InputMode;
+    InputMode.SetHideCursorDuringCapture(false);
+    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+
+    SetInputMode(InputMode);
+
     bShowMouseCursor = true;
 
-    SetInputMode(FInputModeUIOnly());
+    // Get menu glider pawn
+    MenuGliderPawn = Cast<AGliderPawn>( UGameplayStatics::GetActorOfClass( this, AGliderPawn::StaticClass()));
 }

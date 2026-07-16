@@ -9,13 +9,3 @@ void UTimedFlyHUDWidget::SetTime(float TimeInSeconds)
     const int32 Seconds = TotalSeconds % 60;
     TimeText->SetText(FText::FromString(FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds)));
 }
-
-void UTimedFlyHUDWidget::SetHealth(float Health)
-{
-    HealthText->SetText(FText::AsNumber(Health));
-}
-
-void UTimedFlyHUDWidget::SetSpeed(float Speed)
-{
-    SpeedText->SetText(FText::AsNumber(Speed));
-}

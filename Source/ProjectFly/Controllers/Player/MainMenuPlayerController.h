@@ -5,6 +5,7 @@
 #include "MainMenuPlayerController.generated.h"
 
 class UMainMenuUserWidget;
+class AGliderPawn;
 
 UCLASS()
 class PROJECTFLY_API AMainMenuPlayerController : public APlayerController
@@ -20,4 +21,8 @@ protected:
 private:
     UPROPERTY()
     TObjectPtr<UMainMenuUserWidget> MainMenuWidget;
+
+    // Menu plane follows cursor position. Consider this just as a visual gimmic
+    UPROPERTY()
+    TObjectPtr<AGliderPawn> MenuGliderPawn;
 };

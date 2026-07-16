@@ -30,10 +30,33 @@ public:
 
 	UHealthComponent* AccessHealthComponent();
 
+	// Dash
+	void StartDash();
+	void ReleaseDash();
+	void ChargeDashTick(float DiveFactor);
+	void ApplyDashForce();
+	float GetDashCharge() const;
+	float GetDashStamina() const;
+
+	// Halt
+	void StartHalt();
+	void StopHalt();
+
+	// Free Look
+	void StartFreeLook();
+	void StopFreeLook();
+
+	// Camera
+	void LookChange(FVector2D YawPitchChange);
+
+	// Move
+	void MovePitch(float Value);
+	void MoveYaw(float Value);
+	void MoveRoll(float Value);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
 	///////////////////////// Components
@@ -179,29 +202,6 @@ private:
 	void DisableAggressiveTurnAngleTemporarily();
 	void RestoreAggressiveTurnAngle();
 	float PreviousAggressiveTurnAngle = 0.0f;
-
-	// Dash
-	void StartDash();
-	void ReleaseDash();
-	void ChargeDashTick(float DiveFactor);
-	void ApplyDashForce();
-
-	// Halt
-	void StartHalt();
-	void StopHalt();
-	
-	// Free Look
-	void StartFreeLook();
-	void StopFreeLook();
-
-	// Mouse input handlers
-	void LookUp(float Value);
-	void Turn(float Value);
-
-	// Keys input handlers
-	void MovePitch(float Value);
-	void MoveYaw(float Value);
-	void MoveRoll(float Value);
 
 	// Handlers for events
 	UFUNCTION()

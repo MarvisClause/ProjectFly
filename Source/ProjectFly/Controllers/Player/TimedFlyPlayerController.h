@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/PlayerController.h"
+#include "ProjectFly/Controllers/Player/GliderPlayerController.h"
 #include "ProjectFly/GameModes/TimedFlyGameMode.h"
 #include "TimedFlyPlayerController.generated.h"
 
@@ -20,7 +20,7 @@ enum class EUIState : uint8
 };
 
 UCLASS()
-class PROJECTFLY_API ATimedFlyPlayerController : public APlayerController
+class PROJECTFLY_API ATimedFlyPlayerController : public AGliderPlayerController
 {
     GENERATED_BODY()
 
@@ -29,8 +29,6 @@ public:
 
     virtual void Tick(float DeltaSeconds) override;
 
-    virtual void SetupInputComponent() override;
-
     void SetUIState(EUIState NewState);
 
 private:
@@ -38,29 +36,24 @@ private:
     void HandleRunFinished(EFlyResult FlyResult, float TimeInSeconds);
 
     UFUNCTION()
-    void TogglePause();
-
-    UPROPERTY()
-    TObjectPtr<AGliderPawn> GliderPawn;
+    virtual void TogglePause() override;
 
     UPROPERTY()
     TObjectPtr<ATimedFlyGameMode> TimedFlyGameMode;
 
-    UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<UTimedFlyHUDWidget> HUDClass;
-
-    UPROPERTY(EditDefaultsOnly)
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UTimedFlyResultsWidget> ResultsClass;
 
-    UPROPERTY(EditDefaultsOnly)
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UTimedFlyPauseWidget> PauseClass;
-
-    UPROPERTY()
-    TObjectPtr<UTimedFlyHUDWidget> HUDWidget;
 
     UPROPERTY()
     TObjectPtr<UTimedFlyResultsWidget> ResultsWidget;
 
     UPROPERTY()
     TObjectPtr<UTimedFlyPauseWidget> PauseWidget;
+
+    // Pointer to the base HUD widget with attempt to cast it to according child widget
+    UPROPERTY()
+    UTimedFlyHUDWidget* TimedHUD;
 };

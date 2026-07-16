@@ -32,6 +32,7 @@ public:
 	float GetForwardSpeed() const { return ForwardSpeed; }
 	float GetMinimumSpeed() const { return MinimumSpeed; }
 	float GetMaximumSpeed() const { return MaximumSpeed; }
+	float GetSpeedPercentage() const { return (ForwardSpeed - MinimumSpeed) / (MaximumSpeed - MinimumSpeed);}
 
 	// Allows outside system to eanble or disable specific states of flight physics component
 	void SetGravityEnabled(bool bIsEnabled) { bGravityEnabled = bIsEnabled; }

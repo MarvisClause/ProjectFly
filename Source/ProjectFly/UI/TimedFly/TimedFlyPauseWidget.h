@@ -19,12 +19,12 @@ public:
     UPROPERTY(BlueprintAssignable)
     FOnResumeButtonAction OnResumeButtonAction;
 
+    void SetResults(float TimeInSeconds);
+
 protected:
     virtual void NativeConstruct() override;
 
     virtual void NativeDestruct() override;
-
-    void SetResults(float TimeInSeconds);
 
     // Result time
     UPROPERTY(Transient, meta = (BindWidget))

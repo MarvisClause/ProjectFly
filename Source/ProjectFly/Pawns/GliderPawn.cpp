@@ -4,6 +4,7 @@
 #include "ProjectFly/Components/HealthComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/StaticMeshComponent.h"
+
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/PlayerController.h"
 
@@ -188,27 +189,6 @@ UHealthComponent* AGliderPawn::AccessHealthComponent()
 	return HealthComponent;
 }
 
-void AGliderPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	PlayerInputComponent->BindAxis("Turn", this, &AGliderPawn::Turn);
-	PlayerInputComponent->BindAxis("LookUp", this, &AGliderPawn::LookUp);
-
-	PlayerInputComponent->BindAxis("MovePitch", this, &AGliderPawn::MovePitch);
-	PlayerInputComponent->BindAxis("MoveYaw", this, &AGliderPawn::MoveYaw);
-	PlayerInputComponent->BindAxis("MoveRoll", this, &AGliderPawn::MoveRoll);
-
-	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AGliderPawn::StartDash);
-	PlayerInputComponent->BindAction("Dash", IE_Released, this, &AGliderPawn::ReleaseDash);
-	
-	PlayerInputComponent->BindAction("Halt", IE_Pressed, this, &AGliderPawn::StartHalt);
-	PlayerInputComponent->BindAction("Halt", IE_Released, this, &AGliderPawn::StopHalt);
-
-	PlayerInputComponent->BindAction("FreeLook", IE_Pressed, this, &AGliderPawn::StartFreeLook); 
-	PlayerInputComponent->BindAction("FreeLook", IE_Released, this, &AGliderPawn::StopFreeLook);
-}
-
 void AGliderPawn::MovePitch(float Value)
 {
 	if (FMath::Abs(Value) <= KINDA_SMALL_NUMBER)
@@ -363,10 +343,19 @@ void AGliderPawn::ApplyDashForce()
 		return;
 	}
 
-	MeshComponent->AddForce(
-		MeshComponent->GetForwardVector() * DashForceRemaining);
+	MeshComponent->AddForce(MeshComponent->GetForwardVector() * DashForceRemaining);
 
 	DashForceRemaining -= DashForcePerTick;
+}
+
+float AGliderPawn::GetDashCharge() const
+{
+	return DashChargePercent;
+}
+
+float AGliderPawn::GetDashStamina() const
+{
+	return CurrentDashStamina;
 }
 
 void AGliderPawn::StartHalt()
@@ -413,28 +402,19 @@ void AGliderPawn::StopFreeLook()
 	FreeLookYaw = FMath::UnwindDegrees(FreeLookYaw);
 }
 
-void AGliderPawn::Turn(float Value)
+void AGliderPawn::LookChange(FVector2D YawPitchChange)
 {
 	if (bFreeLookActive)
 	{
-		FreeLookYaw += Value * MouseSensitivity;
-	}
-	else
-	{
-		DirectionCameraYaw += Value * MouseSensitivity;
-	}
-}
+		FreeLookYaw += YawPitchChange.X * MouseSensitivity;
 
-void AGliderPawn::LookUp(float Value)
-{
-	if (bFreeLookActive)
-	{
-		FreeLookPitch += Value * MouseSensitivity;
+		FreeLookPitch += YawPitchChange.Y * MouseSensitivity;
 		FreeLookPitch = FMath::Clamp(FreeLookPitch, -MaxFreeLookPitch, MaxFreeLookPitch);
 	}
 	else
 	{
-		DirectionCameraPitch += Value * MouseSensitivity;
+		DirectionCameraYaw += YawPitchChange.X * MouseSensitivity;
+		DirectionCameraPitch += YawPitchChange.Y * MouseSensitivity;
 	}
 }
 

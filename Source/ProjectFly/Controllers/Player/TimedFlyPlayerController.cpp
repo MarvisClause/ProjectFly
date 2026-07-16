@@ -11,9 +11,6 @@ void ATimedFlyPlayerController::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Get reference to glider pawn
-    GliderPawn = Cast<AGliderPawn>(GetPawn());
-
     // Get reference to game mode
     TimedFlyGameMode = GetWorld()->GetAuthGameMode<ATimedFlyGameMode>();
     if (TimedFlyGameMode)
@@ -22,41 +19,31 @@ void ATimedFlyPlayerController::BeginPlay()
     }
 
     // Initialize widgets
-    HUDWidget = CreateWidget<UTimedFlyHUDWidget>(this, HUDClass);
     PauseWidget = CreateWidget<UTimedFlyPauseWidget>(this, PauseClass);
     ResultsWidget = CreateWidget<UTimedFlyResultsWidget>(this, ResultsClass);
 
-    HUDWidget->AddToViewport();
     PauseWidget->AddToViewport();
     ResultsWidget->AddToViewport();
 
-    HUDWidget->SetVisibility(ESlateVisibility::Visible);
     PauseWidget->SetVisibility(ESlateVisibility::Hidden);
     ResultsWidget->SetVisibility(ESlateVisibility::Hidden);
 
     PauseWidget->OnResumeButtonAction.AddDynamic(this, &ATimedFlyPlayerController::TogglePause);
 
     SetUIState(EUIState::Gameplay);
+
+    // Cast HUD widget
+    TimedHUD = Cast<UTimedFlyHUDWidget>(HUDWidget);
 }
 
 void ATimedFlyPlayerController::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-    if ( GliderPawn.Get() )
+    if (TimedHUD)
     {
-        HUDWidget->SetHealth(GliderPawn->AccessHealthComponent()->CurrentHealth);
-        HUDWidget->SetSpeed(GliderPawn->AccessFlightPhysicsComponent()->GetForwardSpeed());
+        TimedHUD->SetTime(TimedFlyGameMode->GetCurrentTimeInSeconds());
     }
-
-    HUDWidget->SetTime(TimedFlyGameMode->GetCurrentTimeInSeconds());
-}
-
-void ATimedFlyPlayerController::SetupInputComponent()
-{
-    Super::SetupInputComponent();
-
-    InputComponent->BindAction( "Pause", IE_Pressed, this, &ATimedFlyPlayerController::TogglePause);
 }
 
 void ATimedFlyPlayerController::SetUIState(EUIState NewState)
@@ -73,22 +60,33 @@ void ATimedFlyPlayerController::SetUIState(EUIState NewState)
         SetPause(false);
         SetInputMode(FInputModeGameOnly());
         bShowMouseCursor = false;
+
+        EnableGameplayInput();
+
         break;
 
     case EUIState::Pause:
         PauseWidget->SetVisibility(ESlateVisibility::Visible);
 
+        PauseWidget->SetResults(TimedFlyGameMode->GetCurrentTimeInSeconds());
+
         SetPause(true);
         SetInputMode(FInputModeUIOnly());
         bShowMouseCursor = true;
+
+        DisableGameplayInput();
+
         break;
 
     case EUIState::Results:
         ResultsWidget->SetVisibility(ESlateVisibility::Visible);
 
-        SetPause(true);
+        SetPause(false);
         SetInputMode(FInputModeUIOnly());
         bShowMouseCursor = true;
+
+        DisableGameplayInput();
+
         break;
     }
 }
