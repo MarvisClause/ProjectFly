@@ -21,6 +21,9 @@ protected:
 
     virtual void NativeDestruct() override;
 
+    UFUNCTION(BlueprintImplementableEvent)
+    void NotifyTimedFlySuccess(bool bIsSuccess);
+
     // Result time
     UPROPERTY(Transient, meta = (BindWidget))
     TObjectPtr<UTextBlock> ResultsTimeText;
@@ -36,9 +39,6 @@ protected:
     // Return to main menu
     UPROPERTY(Transient, meta = (BindWidget))
     TObjectPtr<UButton> ReturnToMainMenuButton;
-
-    UPROPERTY(BlueprintReadOnly, Category = "Result")
-    bool bSucceeded = false;
 
 private:
     UFUNCTION()

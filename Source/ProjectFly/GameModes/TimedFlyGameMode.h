@@ -50,4 +50,7 @@ private:
 
     // Defines, if timer should work
     bool bTimerRunning;
+
+    // Defines, if level is finished
+    bool bIsFinished = false;
 };

@@ -75,12 +75,22 @@ void ATimedFlyGameMode::ResumeTime()
 
 void ATimedFlyGameMode::HandleFinishTriggerReached()
 {
-    StopTime();
-    OnFlyEnded.Broadcast(EFlyResult::Finished, CurrentTimeInSeconds);
+    if (!bIsFinished)
+    {
+        StopTime();
+        OnFlyEnded.Broadcast(EFlyResult::Finished, CurrentTimeInSeconds);
+    }
+
+    bIsFinished = true;
 }
 
 void ATimedFlyGameMode::HandlePlayerDeath()
 {
-    StopTime();
-    OnFlyEnded.Broadcast(EFlyResult::Failed, CurrentTimeInSeconds);
+    if (!bIsFinished)
+    {
+        StopTime();
+        OnFlyEnded.Broadcast(EFlyResult::Failed, CurrentTimeInSeconds);
+    }
+
+    bIsFinished = true;
 }

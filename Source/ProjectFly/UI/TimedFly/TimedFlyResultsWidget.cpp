@@ -41,10 +41,10 @@ void UTimedFlyResultsWidget::NativeDestruct()
 void UTimedFlyResultsWidget::SetResults(bool bIsFinished, float TimeInSeconds)
 {
     // Save success state for UI
-    bSucceeded = bIsFinished;
+    NotifyTimedFlySuccess(bIsFinished);
 
     // Define next level button visibility
-    NextLevelButton->SetVisibility(bSucceeded ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+    NextLevelButton->SetVisibility(bIsFinished ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
     // Don't show next level button, if we reached final level of the game
     if (UProjectFlyGameInstance* GameInstance = Cast<UProjectFlyGameInstance>(GetGameInstance()))
     {
