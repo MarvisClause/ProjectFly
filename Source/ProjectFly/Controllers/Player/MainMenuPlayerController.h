@@ -15,6 +15,11 @@ class PROJECTFLY_API AMainMenuPlayerController : public APlayerController
 protected:
     virtual void BeginPlay() override;
 
+    virtual void Tick(float DeltaSeconds) override;
+
+    UPROPERTY(EditDefaultsOnly, Category = "UI - Glider Plane")
+    float CursorProjectionDistance = 3000.0f;
+
     UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UMainMenuUserWidget> MainMenuWidgetClass;
 

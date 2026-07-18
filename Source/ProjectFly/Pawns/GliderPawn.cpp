@@ -114,19 +114,22 @@ void AGliderPawn::Tick(float DeltaTime)
 	// Apply to spring arm
 	SpringArm->SetWorldRotation(FinalCameraRotation);
 
-	if (bFreeLookActive)
+	if (bControlAutopilot)
 	{
-		FlightPhysicsComponent->SetTargetAutopilotPosition(MeshComponent->GetComponentLocation() + MeshComponent->GetForwardVector() * 1000.0f);
-	}
-	else
-	{
-		FRotator DirectionCameraRotation(
-			DirectionCameraPitch,
-			DirectionCameraYaw,
-			0.f
-		);
+		if (bFreeLookActive)
+		{
+			FlightPhysicsComponent->SetTargetAutopilotPosition(MeshComponent->GetComponentLocation() + MeshComponent->GetForwardVector() * 1000.0f);
+		}
+		else
+		{
+			FRotator DirectionCameraRotation(
+				DirectionCameraPitch,
+				DirectionCameraYaw,
+				0.f
+			);
 
-		FlightPhysicsComponent->SetTargetAutopilotPosition(MeshComponent->GetComponentLocation() + DirectionCameraRotation.Vector() * 1000.0f);
+			FlightPhysicsComponent->SetTargetAutopilotPosition(MeshComponent->GetComponentLocation() + DirectionCameraRotation.Vector() * 1000.0f);
+		}
 	}
 
 
@@ -223,6 +226,11 @@ void AGliderPawn::MoveRoll(float Value)
 	DisableAggressiveTurnAngleTemporarily();
 
 	FlightPhysicsComponent->MoveRoll(Value);
+}
+
+void AGliderPawn::SetAutopilotControl(bool bControl)
+{
+	this->bControlAutopilot = bControl;
 }
 
 void AGliderPawn::OnDiveTickHandler(float DiveFactor)

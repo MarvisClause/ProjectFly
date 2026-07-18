@@ -54,6 +54,9 @@ public:
 	void MoveYaw(float Value);
 	void MoveRoll(float Value);
 
+	// Defines, if pawn can control autopilot or not
+	void SetAutopilotControl(bool bControl);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -193,6 +196,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Glider Control - Manual Control Timeout", meta = (ClampMin = 0.1f))
 	float DisableAutopilotTimeout = 0.1f;
 	FTimerHandle DisableAutopilotEnableTimer;
+	
+	// Defines, if pawn can control autopilot or not
+	bool bControlAutopilot;
 
 	// Autopilot state control
 	void EnableAutopilot();
