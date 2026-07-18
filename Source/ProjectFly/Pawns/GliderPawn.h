@@ -198,7 +198,7 @@ private:
 	FTimerHandle DisableAutopilotEnableTimer;
 	
 	// Defines, if pawn can control autopilot or not
-	bool bControlAutopilot;
+	bool bControlAutopilot = true;
 
 	// Autopilot state control
 	void EnableAutopilot();
