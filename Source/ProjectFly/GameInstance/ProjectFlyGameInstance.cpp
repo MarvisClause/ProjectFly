@@ -45,7 +45,6 @@ void UProjectFlyGameInstance::CompleteCurrentLevel()
     {
         HighestUnlockedLevel++;
     }
-    CurrentLevelIndex++;
 
     SaveGameProgress();
 }
@@ -71,6 +70,7 @@ void UProjectFlyGameInstance::LoadNextLevel()
     if (LevelList.IsValidIndex(CurrentLevelIndex + 1))
     {
         CompleteCurrentLevel();
+        CurrentLevelIndex++;
         LoadCurrentLevel();
     }
     else

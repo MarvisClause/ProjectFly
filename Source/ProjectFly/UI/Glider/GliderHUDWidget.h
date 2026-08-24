@@ -32,5 +32,5 @@ protected:
     TObjectPtr<UTextBlock> StaminaText;
 
     UPROPERTY(meta = (BindWidget))
-    TObjectPtr<UProgressBar> DashChargeBar;
+    TObjectPtr<UTextBlock> DashChargeText;
 };

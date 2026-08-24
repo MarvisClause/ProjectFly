@@ -20,6 +20,5 @@ void UGliderHUDWidget::SetStamina(float Stamina)
 
 void UGliderHUDWidget::SetDashCharge(float Percent)
 {
-    DashChargeBar->SetRenderOpacity(Percent > 0.0f ? 1.0f : 0.0f);
-    DashChargeBar->SetPercent(Percent);
+    DashChargeText->SetText(FText::AsNumber(Percent));
 }
