@@ -52,6 +52,11 @@ void UTimedFlyResultsWidget::SetResults(bool bIsFinished, float TimeInSeconds)
         {
             NextLevelButton->SetVisibility( ESlateVisibility::Hidden);
         }
+
+        if (bIsFinished)
+        {
+            GameInstance->CompleteCurrentLevel();
+        }
     }
 
     // Set time
