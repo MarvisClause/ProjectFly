@@ -10,6 +10,10 @@
 
 #include "ProjectFly/UI/Glider/GliderHUDWidget.h"
 
+#include "ProjectFly/Objects/HintMessageTrigger.h"
+
+#include <Kismet/GameplayStatics.h>
+
 void AGliderPlayerController::BeginPlay()
 {
     Super::BeginPlay();
@@ -29,6 +33,17 @@ void AGliderPlayerController::BeginPlay()
 	HUDWidget = CreateWidget<UGliderHUDWidget>(this, HUDClass);
 	HUDWidget->AddToViewport();
 	HUDWidget->SetVisibility(ESlateVisibility::Visible);
+
+	// Find all hint message triggers and subsribe to them
+	TArray<AActor*> HintTriggers;
+	UGameplayStatics::GetAllActorsOfClass(this, AHintMessageTrigger::StaticClass(), HintTriggers);
+	for (AActor* Actor : HintTriggers)
+	{
+		if (AHintMessageTrigger* HintTrigger = Cast<AHintMessageTrigger>(Actor))
+		{
+			HintTrigger->OnHintTriggered.AddDynamic( this, &AGliderPlayerController::HandleHintTriggered );
+		}
+	}
 }
 
 void AGliderPlayerController::Tick(float DeltaSeconds)
@@ -172,4 +187,9 @@ void AGliderPlayerController::OnFreeLookReleased(const FInputActionValue&)
 	{
 		GliderPawn->StopFreeLook();
 	}
+}
+
+void AGliderPlayerController::HandleHintTriggered(FText Message, float DisplayTime)
+{
+	HUDWidget->SetHintMessage(Message, DisplayTime);
 }

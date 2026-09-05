@@ -6,6 +6,7 @@
 
 class UTextBlock;
 class UProgressBar;
+class UHintMessageWidget;
 
 UCLASS(Abstract)
 class PROJECTFLY_API UGliderHUDWidget : public UUserWidget
@@ -21,6 +22,8 @@ public:
 
     void SetDashCharge(float Percent);
 
+    void SetHintMessage(FText Message, float DisplayTime);
+
 protected:
     UPROPERTY(meta=(BindWidget))
     TObjectPtr<UTextBlock> HealthText;
@@ -33,4 +36,7 @@ protected:
 
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UTextBlock> DashChargeText;
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<UHintMessageWidget> HintMessageWidget;
 };

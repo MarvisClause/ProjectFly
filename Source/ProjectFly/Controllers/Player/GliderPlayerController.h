@@ -51,6 +51,9 @@ private:
     void OnFreeLookStarted(const FInputActionValue&);
     void OnFreeLookReleased(const FInputActionValue&);
 
+    UFUNCTION()
+    void HandleHintTriggered(FText Message, float DisplayTime);
+
     UPROPERTY(EditDefaultsOnly, Category="Enhanced Input")
     UInputMappingContext* GliderContext;
 

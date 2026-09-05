@@ -2,6 +2,7 @@
 #include "Components/TextBlock.h"
 #include "Components/ProgressBar.h"
 #include <Kismet/GameplayStatics.h>
+#include "HintMessageWidget.h"
 
 void UGliderHUDWidget::SetHealth(float Health)
 {
@@ -21,4 +22,9 @@ void UGliderHUDWidget::SetStamina(float Stamina)
 void UGliderHUDWidget::SetDashCharge(float Percent)
 {
     DashChargeText->SetText(FText::AsNumber(Percent));
+}
+
+void UGliderHUDWidget::SetHintMessage(FText Message, float DisplayTime)
+{
+    HintMessageWidget->ShowMessage(Message, DisplayTime);
 }
